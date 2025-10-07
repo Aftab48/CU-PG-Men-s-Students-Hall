@@ -33,7 +33,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function BoarderLoginScreen() {
+function BoarderLoginScreen() {
   const [isSignup, setIsSignup] = useState(false);
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState("");
@@ -487,3 +487,5 @@ export default function BoarderLoginScreen() {
     </SafeAreaView>
   );
 }
+
+export default BoarderLoginScreen;

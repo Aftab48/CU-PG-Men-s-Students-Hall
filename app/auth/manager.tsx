@@ -19,7 +19,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function ManagerLoginScreen() {
+function ManagerLoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -163,3 +163,5 @@ export default function ManagerLoginScreen() {
     </SafeAreaView>
   );
 }
+
+export default ManagerLoginScreen;

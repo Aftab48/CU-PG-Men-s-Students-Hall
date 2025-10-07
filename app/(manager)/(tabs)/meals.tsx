@@ -5,15 +5,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BarChart3, Clock } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-export default function MealCount() {
+function MealCount() {
   const [mealStats, setMealStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -150,3 +150,5 @@ export default function MealCount() {
     </ScrollView>
   );
 }
+
+export default MealCount;

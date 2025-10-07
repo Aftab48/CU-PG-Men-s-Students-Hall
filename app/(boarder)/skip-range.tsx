@@ -36,7 +36,7 @@ function clampDate(value: Date, min: Date, max: Date): Date {
   return value;
 }
 
-export default function SkipDateRangeScreen() {
+function SkipDateRangeScreen() {
   const minDate = useMemo(() => getTomorrow(), []);
   const maxDate = useMemo(() => getEndOfMonth(new Date()), []);
 
@@ -213,3 +213,4 @@ export default function SkipDateRangeScreen() {
 }
 
 
+export default SkipDateRangeScreen;

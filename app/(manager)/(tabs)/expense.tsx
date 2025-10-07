@@ -21,7 +21,7 @@ import {
   View,
 } from "react-native";
 
-export default function ExpenseLogging() {
+function ExpenseLogging() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [dateObj, setDateObj] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -256,3 +256,5 @@ export default function ExpenseLogging() {
     </ScrollView>
   );
 }
+
+export default ExpenseLogging;

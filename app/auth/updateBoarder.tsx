@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function UpdateBoarderPassword() {
+function UpdateBoarderPassword() {
   const [email, setEmail] = useState("");
   const [greetName, setGreetName] = useState<string | null>(null);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -236,3 +236,5 @@ export default function UpdateBoarderPassword() {
     </SafeAreaView>
   );
 }
+
+export default UpdateBoarderPassword;

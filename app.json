@@ -51,7 +51,17 @@
       "router": {},
       "eas": {
         "projectId": "7f652ae7-0130-4310-8270-8cbf2e18c3ec"
-      }
+      },
+      "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "68c8ec1f002cb4b9ce1d",
+      "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "CUPG",
+      "EXPO_PUBLIC_APPWRITE_ENDPOINT": "https://syd.cloud.appwrite.io/v1",
+      "EXPO_PUBLIC_APPWRITE_DATABASE_ID": "68cd9eac0039ed81523e",
+      "EXPO_PUBLIC_APPWRITE_BOARDERS_TABLE_ID": "boarders",
+      "EXPO_PUBLIC_APPWRITE_MANAGERS_TABLE_ID": "managers",
+      "EXPO_PUBLIC_APPWRITE_EXPENSES_TABLE_ID": "expenses",
+      "EXPO_PUBLIC_APPWRITE_MEALS_TABLE_ID": "meals",
+      "EXPO_PUBLIC_APPWRITE_STAFF_TABLE_ID": "staff",
+      "EXPO_PUBLIC_APPWRITE_BUCKET_ID": "68d02fbb001f33a507df"
     }
   }
 }

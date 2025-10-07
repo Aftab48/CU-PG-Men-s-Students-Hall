@@ -1,7 +1,6 @@
 // app/(manager)/(tabs)/summary.tsx
 
 import { getAllActiveBoarders, getExpensesForDateRange, getTotalExpenses } from "@/lib/actions";
-import { useExpenseStore } from "@/stores/expense-store";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Calendar,
@@ -19,17 +18,31 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-let FileSystem: any = null, Sharing: any = null;
-try {
-  // Dynamically require to avoid crashes if module not installed yet
-  // @ts-ignore
-  FileSystem = require("expo-file-system");
-  // @ts-ignore
-  Sharing = require("expo-sharing");
-} catch {}
 
 export default function MonthlySummaryScreen() {
-  const expenses = useExpenseStore((state) => state.expenses);
+
+ const [FileSystem, setFileSystem] = useState<any>(null);
+ const [Sharing, setSharing] = useState<any>(null);
+
+ useEffect(() => {
+   const loadModules = async () => {
+     try {
+       const fs = await import("expo-file-system");
+       setFileSystem(fs);
+     } catch {}
+
+     try {
+       const sh = await import("expo-sharing");
+       setSharing(sh);
+     } catch {}
+   };
+
+   loadModules();
+ }, []);
+
+
+
+  //const expenses = useExpenseStore((state) => state.expenses);
   const [totalFunding, setTotalFunding] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);

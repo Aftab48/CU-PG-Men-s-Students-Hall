@@ -20,7 +20,7 @@ import {
   View,
 } from "react-native";
 
-export default function BoarderMealTracker() {
+function BoarderMealTracker() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -450,3 +450,5 @@ export default function BoarderMealTracker() {
     </ScrollView>
   );
 }
+
+export default BoarderMealTracker;

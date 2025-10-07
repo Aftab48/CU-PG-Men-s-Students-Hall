@@ -12,7 +12,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 // Reusable Row Component
-const Row = ({
+export const Row = ({
   label,
   value,
   isNegative = false,
@@ -50,7 +50,7 @@ const SummaryCard = ({
   </View>
 );
 
-export default function BalanceScreen() {
+function BalanceScreen() {
   const { user } = useAuthStore();
   const [boarderProfile, setBoarderProfile] = useState<any>(null);
   const [monthlyMealsCount, setMonthlyMealsCount] = useState<number>(0);
@@ -164,3 +164,5 @@ export default function BalanceScreen() {
     </ScrollView>
   );
 }
+
+export default BalanceScreen;

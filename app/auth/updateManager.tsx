@@ -1,25 +1,25 @@
 import {
-    getManagerProfile,
-    updateManagerPassword,
+  getManagerProfile,
+  updateManagerPassword,
 } from "@/lib/actions/manager.actions";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Eye, EyeOff, Lock } from "lucide-react-native";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function UpdateManagerPassword() {
+function UpdateManagerPassword() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -175,3 +175,5 @@ export default function UpdateManagerPassword() {
     </SafeAreaView>
   );
 }
+
+export default UpdateManagerPassword;
