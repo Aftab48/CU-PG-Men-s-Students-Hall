@@ -1,7 +1,7 @@
 // lib/actions/auth.actions.ts
 
 import { account } from "../appwrite";
-import { getBoarderProfile } from "./boarder.actions";
+import { getBoarderProfile, getBoarderProfileByEmail } from "./boarder.actions";
 //import { getStaffProfile } from "./staff.actions";
 
 export interface AuthUser {
@@ -138,5 +138,61 @@ export async function logoutUser() {
       success: false,
       error: error.message || "Failed to logout",
     };
+  }
+}
+
+/**
+ * Update the current user's password using Appwrite Auth
+ */
+export async function updateCurrentUserPassword(
+  currentPassword: string,
+  newPassword: string
+) {
+  try {
+    if (!currentPassword?.trim() || !newPassword?.trim()) {
+      throw new Error("Please provide both current and new passwords");
+    }
+    if (newPassword.length < 8) {
+      throw new Error("New password must be at least 8 characters long");
+    }
+
+    await account.updatePassword({
+      password: newPassword,
+      oldPassword: currentPassword,
+    });
+
+    return { success: true, message: "Password updated successfully" };
+  } catch (error: any) {
+    console.error("Update password error:", error);
+    return {
+      success: false,
+      error:
+        error?.message ||
+        "Failed to update password. Please verify your current password.",
+    };
+  }
+}
+
+/**
+ * Email-first flow: verify boarder by email to greet, then update with current password
+ * This does NOT store email-password; it only uses email to fetch profile for greeting.
+ */
+export async function updatePasswordWithEmailFlow(
+  email: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  try {
+    if (!email?.trim()) throw new Error("Email is required");
+    const profile = await getBoarderProfileByEmail(email.trim());
+    if (!profile) throw new Error("No boarder found with that email");
+
+    // perform the password update using current session or provided current password
+    const result = await updateCurrentUserPassword(currentPassword, newPassword);
+    if (!result.success) return result;
+
+    return { success: true, name: profile.name, message: result.message };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Failed to update password" };
   }
 }

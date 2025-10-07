@@ -292,7 +292,7 @@ export default function BoarderLoginScreen() {
                         onPress={() => router.replace("/auth/updateBoarder")}
                         >
                           <Text className="text-gray-800 text-base font-semibold">
-                            Change Password
+                            Forgot Password?
                           </Text>
                       </TouchableOpacity>
                   </>

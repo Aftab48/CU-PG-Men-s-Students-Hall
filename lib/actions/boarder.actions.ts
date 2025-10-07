@@ -1,6 +1,7 @@
 // lib/actions/boarder.actions.ts
 
 import { account, appwriteConfig, avatars, ID, Query, tables } from "../appwrite";
+import { seedMealsForBoarder } from "../seedMeals";
 import { setMealStatusForDateRange } from "./meal.actions";
 
 export interface BoarderSignupData {
@@ -93,6 +94,13 @@ export async function signUpBoarderStep2(
     });
     console.log(boarderProfile);
     
+    // Seed meals for this new boarder through end of month (by userId)
+    try {
+      await seedMealsForBoarder(userId);
+    } catch (seedErr) {
+      console.error("Seed meals for new boarder failed:", seedErr);
+    }
+    
     return {
       success: true,
       profile: boarderProfile,
@@ -126,6 +134,29 @@ export async function getBoarderProfile(
 
   } catch (error: any) {
     console.error("Get boarder profile error:", error);
+    return null;
+  }
+}
+
+/**
+ * Get boarder profile by email
+ */
+export async function getBoarderProfileByEmail(
+  email: string
+): Promise<BoarderProfile | null> {
+  try {
+    const response = await tables.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      queries: [Query.equal("email", email)],
+    });
+
+    if (response.rows.length === 0) {
+      return null;
+    }
+    return response.rows[0] as unknown as BoarderProfile;
+  } catch (error: any) {
+    console.error("Get boarder profile by email error:", error);
     return null;
   }
 }
