@@ -3,7 +3,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
-
 interface MealState {
   meals: Record<string, DayMeals>;
   toggleMeal: (date: string, mealType: keyof DayMeals) => void;
@@ -23,24 +22,22 @@ export const useMealStore = create<MealState>()(
   persist(
     (set) => ({
       meals: {},
+
       toggleMeal: (date: string, mealType: keyof DayMeals) => {
+        const dateKey = date.slice(0, 10); // normalize date format
         set((state) => ({
           meals: {
             ...state.meals,
-            [date]: {
-              ...state.meals[date],
-              brunch: state.meals[date]?.brunch || false,
-              dinner: state.meals[date]?.dinner || false,
-              [mealType]: !state.meals[date]?.[mealType],
+            [dateKey]: {
+              brunch: state.meals[dateKey]?.brunch || false,
+              dinner: state.meals[dateKey]?.dinner || false,
+              [mealType]: !state.meals[dateKey]?.[mealType],
             },
           },
         }));
       },
-      skipMeals: (
-        startDate: string,
-        endDate: string,
-        mealTypes: (keyof DayMeals)[]
-      ) => {
+
+      skipMeals: (startDate, endDate, mealTypes) => {
         set((state) => {
           const newMeals = { ...state.meals };
           const start = new Date(startDate);
@@ -51,34 +48,23 @@ export const useMealStore = create<MealState>()(
             date <= end;
             date.setDate(date.getDate() + 1)
           ) {
-            const dateStr = date.toISOString().split("T")[0];
-            if (!newMeals[dateStr]) {
-              newMeals[dateStr] = {
-                brunch: false,
-                dinner: false,
-              };
-            }
-
-            mealTypes.forEach((mealType) => {
-              newMeals[dateStr][mealType] = false;
-            });
+            const dateStr = date.toISOString().slice(0, 10);
+            newMeals[dateStr] ??= { brunch: false, dinner: false };
+            mealTypes.forEach((t) => (newMeals[dateStr][t] = false));
           }
 
           return { meals: newMeals };
         });
       },
-      setMealStatus: (
-        date: string,
-        mealType: keyof DayMeals,
-        status: boolean
-      ) => {
+
+      setMealStatus: (date, mealType, status) => {
+        const dateKey = date.slice(0, 10);
         set((state) => ({
           meals: {
             ...state.meals,
-            [date]: {
-              ...state.meals[date],
-              brunch: state.meals[date]?.brunch || false,
-              dinner: state.meals[date]?.dinner || false,
+            [dateKey]: {
+              brunch: state.meals[dateKey]?.brunch || false,
+              dinner: state.meals[dateKey]?.dinner || false,
               [mealType]: status,
             },
           },

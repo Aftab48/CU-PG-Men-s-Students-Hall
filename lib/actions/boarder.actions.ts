@@ -1,13 +1,7 @@
 // lib/actions/boarder.actions.ts
 
-import {
-  account,
-  appwriteConfig,
-  avatars,
-  ID,
-  Query,
-  tables,
-} from "../appwrite";
+import { account, appwriteConfig, avatars, ID, Query, tables } from "../appwrite";
+import { setMealStatusForDateRange } from "./meal.actions";
 
 export interface BoarderSignupData {
   name: string;
@@ -33,9 +27,8 @@ export interface BoarderProfile {
   email: string;
   phone?: string;
   roomNumber?: string;
-  advancePayment: number;
-  currentBalance: number;
-  joinedAt: string;
+  advance: number;
+  current: number;
   isActive: boolean;
   mealPreference: "veg" | "non-veg" | "egg" | "fish";
   avatarUrl: URL;
@@ -129,8 +122,8 @@ export async function getBoarderProfile(
     if (response.rows.length === 0) {
       return null;
     }
-
     return response.rows[0] as unknown as BoarderProfile;
+
   } catch (error: any) {
     console.error("Get boarder profile error:", error);
     return null;
@@ -142,7 +135,7 @@ export async function getBoarderProfile(
  */
 export async function updateBoarderProfile(
   profileId: string,
-  updates: Partial<Omit<BoarderProfile, "$id" | "userId" | "joinedAt">>
+  updates: Partial<Omit<BoarderProfile, "$id" | "userId">>
 ) {
   try {
     if (!profileId?.trim()) {
@@ -201,7 +194,28 @@ export async function updateBoarderMealPreference(
 }
 
 /**
- * Update boarder balance
+ * Optionally persist mealsCount on a boarder profile (if column exists).
+ */
+export async function persistMealsCountIfSupported(
+  profileId: string,
+  mealsCount: number
+) {
+  try {
+    const updated = await tables.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+      data: { mealsCount },
+    });
+    return { success: true, profile: updated };
+  } catch (error: any) {
+    // Silently ignore if the column doesn't exist or update fails
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Update a boarder’s balance.
  */
 export async function updateBoarderBalance(
   profileId: string,
@@ -209,22 +223,26 @@ export async function updateBoarderBalance(
   options: { mode: "set" | "increment" } = { mode: "set" }
 ) {
   try {
-    // fetch current row if increment mode
     let newBalance = amount;
+
+    // fetch current row if increment mode
     if (options.mode === "increment") {
       const current = await tables.getRow({
         databaseId: appwriteConfig.databaseId,
         tableId: appwriteConfig.boardersTableId,
         rowId: profileId,
       });
-      newBalance = (current.currentBalance ?? 0) + amount;
+
+      // note: row data is in current.rows[0] if using Tables API v1.4+
+      const currentBalance = current?.current ?? 0;
+      newBalance = currentBalance + amount;
     }
 
     const updatedProfile = await tables.updateRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.boardersTableId,
       rowId: profileId,
-      data: { currentBalance: newBalance },
+      data: { current: newBalance }
     });
 
     return { success: true, profile: updatedProfile };
@@ -237,6 +255,7 @@ export async function updateBoarderBalance(
   }
 }
 
+
 /**
  * Get all active boarders (for manager view)
  */
@@ -245,7 +264,7 @@ export async function getAllActiveBoarders(): Promise<BoarderProfile[]> {
     const response = await tables.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.boardersTableId,
-      queries: [Query.equal("isActive", true), Query.orderDesc("joinedAt")],
+      queries: [Query.equal("isActive", true), Query.orderDesc("$updatedAt")],
     });
 
     return response.rows as unknown as BoarderProfile[];
@@ -254,3 +273,58 @@ export async function getAllActiveBoarders(): Promise<BoarderProfile[]> {
     return [];
   }
 }
+
+
+/**
+ * Convenience wrapper to skip meals for a boarder within a date range.
+ */
+export async function skipMealsForDateRange(
+  boarderId: string,
+  startDate: string,
+  endDate: string,
+  options: { brunch?: boolean; dinner?: boolean }
+) {
+  return setMealStatusForDateRange(boarderId, startDate, endDate, {
+    brunch: options.brunch !== false,
+    dinner: options.dinner !== false,
+    status: "OFF",
+  });
+}
+
+/**
+ * Deduct a fixed charge per meal from boarder's balance
+ */
+// export async function deductMealCharge(profileId: string, chargePerMeal = 50) {
+//   try {
+//     // Get current balance
+//     const row = await tables.getRow({
+//       databaseId: appwriteConfig.databaseId,
+//       tableId: appwriteConfig.boardersTableId,
+//       rowId: profileId,
+//     });
+
+//     const currentBalance = row?.current ?? 0;
+//     const newBalance = currentBalance - chargePerMeal;
+
+//     // Update the table
+//      const updatedProfile = await tables.updateRow({
+//        databaseId: appwriteConfig.databaseId,
+//        tableId: appwriteConfig.boardersTableId,
+//        rowId: profileId,
+//        data: { currentBalance: newBalance },
+//      });
+
+
+//     return {
+//       success: true,
+//       newBalance,
+//       profile: updatedProfile,
+//     };
+//   } catch (error: any) {
+//     console.error("Deduct meal charge error:", error);
+//     return {
+//       success: false,
+//       error: error.message || "Failed to deduct meal charge",
+//     };
+//   }
+// }

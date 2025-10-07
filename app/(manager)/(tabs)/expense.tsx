@@ -2,25 +2,43 @@
 
 import { createExpense } from "@/lib/actions";
 import { useAuthStore } from "@/stores/auth-store";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Calendar, Camera, Save } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Keyboard,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  Keyboard,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function ExpenseLogging() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState<"groceries" | "other">("groceries");
+  const [dateObj, setDateObj] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [category, setCategory] = useState<
+    | "fish"
+    | "chicken"
+    | "paneer"
+    | "veg"
+    | "gas"
+    | "grocery"
+    | "eggs"
+    | "rice/potato"
+    | "misc"
+    | "grand"
+    | "prev"
+    | "staff"
+  >("grocery");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [receipt, setReceipt] = useState<string | null>(null);
@@ -53,7 +71,6 @@ export default function ExpenseLogging() {
     setLoading(true);
     try {
       const result = await createExpense({
-        managerId: user.id,
         date,
         category,
         amount: parseFloat(amount.trim()),
@@ -76,6 +93,39 @@ export default function ExpenseLogging() {
     }
   };
 
+  const onChangeDate = (_event: any, selectedDate?: Date) => {
+    const currentDate = selectedDate ?? dateObj;
+    if (Platform.OS !== "ios") setShowDatePicker(false);
+    setDateObj(currentDate);
+    setDate(new Date(currentDate).toISOString().split("T")[0]);
+  };
+
+  const expenseCategories: (| "fish"
+    | "chicken"
+    | "paneer"
+    | "veg"
+    | "gas"
+    | "grocery"
+    | "eggs"
+    | "rice/potato"
+    | "misc"
+    | "grand"
+    | "prev"
+    | "staff")[] = [
+    "fish",
+    "chicken",
+    "paneer",
+    "veg",
+    "gas",
+    "grocery",
+    "eggs",
+    "rice/potato",
+    "misc",
+    "grand",
+    "prev",
+    "staff",
+  ];
+
   return (
     <ScrollView
       className="flex-1 bg-slate-50"
@@ -96,42 +146,36 @@ export default function ExpenseLogging() {
           </Text>
           <View className="mb-5">
             <Text className="text-sm font-medium text-gray-700 mb-2">Date</Text>
-            <View className="flex-row items-center border border-gray-300 rounded-lg px-3">
-              <Calendar size={20} color="#6b7280" className="mr-2" />
-              <TextInput
-                className="flex-1 py-3 text-base text-gray-800"
-                value={date}
-                onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
+            <TouchableOpacity
+              className="flex-row items-center border border-gray-300 rounded-lg px-3 py-3"
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.8}
+            >
+              <Calendar size={20} color="#6b7280" />
+              <Text className="ml-2 text-base text-gray-800">{date}</Text>
+            </TouchableOpacity>
+            {showDatePicker && (
+              <DateTimePicker
+                value={dateObj}
+                mode="date"
+                display={Platform.OS === "ios" ? "inline" : "calendar"}
+                onChange={onChangeDate}
               />
-            </View>
+            )}
           </View>
 
           {/* Category */}
           <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">
-              Category
-            </Text>
-            <View className="flex-row gap-3">
-              {(["groceries", "other"] as const).map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  className={`flex-1 py-3 px-4 rounded-lg border items-center ${
-                    category === cat
-                      ? "bg-blue-700 border-blue-700"
-                      : "border-gray-300"
-                  }`}
-                  onPress={() => setCategory(cat)}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      category === cat ? "text-white" : "text-gray-600"
-                    }`}
-                  >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <Text className="text-sm font-medium text-gray-700 mb-2">Category</Text>
+            <View className="border border-gray-300 rounded-lg overflow-hidden">
+              <Picker
+                selectedValue={category}
+                onValueChange={(itemValue) => setCategory(itemValue)}
+              >
+                {expenseCategories.map((cat) => (
+                  <Picker.Item key={cat} label={cat} value={cat} />
+                ))}
+              </Picker>
             </View>
           </View>
 

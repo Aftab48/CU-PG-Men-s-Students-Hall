@@ -1,15 +1,14 @@
 // app/(boarder)/(tabs)/balance.tsx
 
-import { useMealStore } from "@/stores/meal-store";
+import { countCurrentMonthMealsForBoarder, getBoarderProfile, persistMealsCountIfSupported } from "@/lib/actions";
+import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Calendar,
-  DollarSign,
-  TrendingDown,
   TrendingUp,
-  Wallet,
+  Wallet
 } from "lucide-react-native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 // Reusable Row Component
@@ -52,89 +51,101 @@ const SummaryCard = ({
 );
 
 export default function BalanceScreen() {
-  const { meals } = useMealStore();
+  const { user } = useAuthStore();
+  const [boarderProfile, setBoarderProfile] = useState<any>(null);
+  const [monthlyMealsCount, setMonthlyMealsCount] = useState<number>(0);
+
+  useEffect(() => {
+      if (user) {
+        loadBoarderProfile();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    const loadBoarderProfile = async () => {
+        if (!user) return;
+    
+        try {
+          const profile = await getBoarderProfile(user.id);
+          setBoarderProfile(profile ?? null);
+          if (profile?.$id) {
+            const mealsCountRes = await countCurrentMonthMealsForBoarder(profile.userId || user.id);
+            if (mealsCountRes.success) {
+              setMonthlyMealsCount(mealsCountRes.count);
+              // best-effort persist to profile if supported
+              await persistMealsCountIfSupported(profile.$id, mealsCountRes.count);
+            } else {
+              setMonthlyMealsCount(0);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load boarder profile:", error);
+        }
+      };
+    
 
   const balanceData = useMemo(() => {
-    const advancePayment = 15000; // fallback value
-    const mealRate = 150; // fallback per meal
+    if (!boarderProfile) return {
+      advancePayment: 0,
+      totalMealsConsumed: 0,
+    };
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    let totalMealsConsumed = 0;
-
-    if (meals && Object.keys(meals).length > 0) {
-      Object.entries(meals).forEach(([date, dayMeals]: any) => {
-        const mealDate = new Date(date);
-        if (mealDate >= startOfMonth && mealDate <= now) {
-          if (dayMeals.brunch) totalMealsConsumed++;
-          if (dayMeals.dinner) totalMealsConsumed++;
-        }
-      });
-    }
-
-    const totalMealCost = totalMealsConsumed * mealRate;
-    const remainingBalance = advancePayment - totalMealCost;
-    const isOwed = remainingBalance < 0;
+    const advancePayment = boarderProfile.advance || 0;
+    const totalMealsConsumed = monthlyMealsCount || 0;
 
     return {
       advancePayment,
       totalMealsConsumed,
-      totalMealCost,
-      remainingBalance: Math.abs(remainingBalance),
-      isOwed,
-      mealRate,
     };
-  }, [meals]);
+  }, [boarderProfile, monthlyMealsCount]);
+
+  if (!boarderProfile) {
+    return (
+      <ScrollView className="flex-1 bg-slate-50">
+        <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
+          <Text className="text-2xl font-bold text-white">
+            Loading balance...
+          </Text>
+        </LinearGradient>
+      </ScrollView>
+    );
+  }
+
 
   return (
     <ScrollView className="flex-1 bg-slate-50">
       <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
-        <Text className="text-2xl font-bold text-white">Balance Tracker</Text>
+        <Text className="text-2xl font-bold justify-center items-center text-white">
+          Welcome <Text className="text-emerald-200">{boarderProfile?.name}</Text>
+        </Text>
+        <Text className="text-2xl font-bold text-white">Monthly Overview</Text>
         <Text className="text-base text-slate-200 mt-1">
-          Monitor your monthly balance
+          View your advance payment and meals consumed
         </Text>
       </LinearGradient>
 
       <View className="p-4">
-        {/* Main Balance Card */}
+        {/* Advance Payment Card */}
         <View className="bg-white rounded-3xl p-6 mb-5 items-center shadow-xl">
           <View className="items-center mb-3">
-            <Wallet
-              size={32}
-              color={balanceData.isOwed ? "#dc2626" : "#059669"}
-            />
+            <Wallet size={32} color="#059669" />
             <Text className="text-base text-gray-600 mt-2">
-              {balanceData.isOwed ? "Amount Owed" : "Remaining Balance"}
+              Monthly Advance Payment
             </Text>
           </View>
-          <Text
-            className={`text-4xl font-bold mb-3 ${balanceData.isOwed ? "text-red-600" : "text-emerald-600"}`}
-          >
-            ₹{balanceData.remainingBalance.toLocaleString()}
+          <Text className="text-4xl font-bold mb-3 text-emerald-600">
+            ₹{balanceData.advancePayment.toLocaleString()}
           </Text>
           <View className="flex-row items-center gap-2">
-            {balanceData.isOwed ? (
-              <TrendingDown size={20} color="#dc2626" />
-            ) : (
-              <TrendingUp size={20} color="#059669" />
-            )}
-            <Text
-              className={`text-sm font-medium ${balanceData.isOwed ? "text-red-600" : "text-emerald-600"}`}
-            >
-              {balanceData.isOwed ? "You owe money" : "Money remaining"}
+            <TrendingUp size={20} color="#059669" />
+            <Text className="text-sm font-medium text-emerald-600">
+              Paid in advance
             </Text>
           </View>
         </View>
 
         {/* Summary Cards */}
         <View className="flex-row gap-3 mb-5">
-          <SummaryCard
-            icon={DollarSign}
-            label="Advance Payment"
-            value={`₹${balanceData.advancePayment.toLocaleString()}`}
-            color="#1e40af"
-          />
           <SummaryCard
             icon={Calendar}
             label="Meals Consumed"
@@ -143,53 +154,10 @@ export default function BalanceScreen() {
           />
         </View>
 
-        {/* Breakdown Section */}
-        <View className="bg-white rounded-2xl p-5 mb-5 shadow-lg">
-          <Text className="text-lg font-semibold text-gray-800 mb-4">
-            Monthly Breakdown
-          </Text>
-
-          <Row
-            label="Starting Balance"
-            value={`₹${balanceData.advancePayment.toLocaleString()}`}
-          />
-          <Row
-            label="Meal Rate (per meal)"
-            value={`₹${balanceData.mealRate}`}
-          />
-          <Row
-            label="Total Meals"
-            value={`${balanceData.totalMealsConsumed} meals`}
-          />
-          <Row
-            label="Total Meal Cost"
-            value={`-₹${balanceData.totalMealCost.toLocaleString()}`}
-            isNegative
-          />
-
-          <View className="flex-row justify-between items-center pt-4 mt-2 border-t-2 border-gray-200">
-            <Text className="text-base font-semibold text-gray-800">
-              {balanceData.isOwed ? "Amount Owed" : "Remaining Balance"}
-            </Text>
-            <Text
-              className={`text-lg font-bold ${balanceData.isOwed ? "text-red-600" : "text-emerald-600"}`}
-            >
-              {balanceData.isOwed ? "-" : ""}₹
-              {balanceData.remainingBalance.toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
         {/* Status Message */}
-        <View
-          className={`rounded-xl p-4 ${balanceData.isOwed ? "bg-red-50 border border-red-200" : "bg-emerald-50 border border-emerald-200"}`}
-        >
-          <Text
-            className={`text-sm text-center leading-5 ${balanceData.isOwed ? "text-red-600" : "text-emerald-600"}`}
-          >
-            {balanceData.isOwed
-              ? `You need to pay ₹${balanceData.remainingBalance.toLocaleString()} at the end of the month.`
-              : `You have ₹${balanceData.remainingBalance.toLocaleString()} remaining for this month.`}
+        <View className="rounded-xl p-4 bg-emerald-50 border border-emerald-200">
+          <Text className="text-sm text-center leading-5 text-emerald-600">
+            This month you have consumed {balanceData.totalMealsConsumed} meals with an advance payment of ₹{balanceData.advancePayment.toLocaleString()}.
           </Text>
         </View>
       </View>

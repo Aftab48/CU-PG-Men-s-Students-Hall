@@ -16,7 +16,6 @@ export interface BoarderProfile {
   roomNumber?: string;
   advancePayment: number;
   currentBalance: number;
-  joinedAt: string;
   isActive: boolean;
 }
 
@@ -50,13 +49,25 @@ export interface User {
 }
 
 export interface Expense {
-  id: string;
-  date: string;
-  category: "groceries" | "other";
+  id: string; // maps to $id
+  date: string; // ISO string (e.g., 2025-10-07T00:00:00.000+00:00)
+  category:
+    | "fish"
+    | "chicken"
+    | "paneer"
+    | "veg"
+    | "gas"
+    | "grocery"
+    | "eggs"
+    | "rice/potato"
+    | "misc"
+    | "grand"
+    | "prev"
+    | "staff";
   amount: number;
   description: string;
   receipt?: string;
-  createdAt: string;
+  createdAt: string; // maps to $createdAt
 }
 
 export interface DayMeals {

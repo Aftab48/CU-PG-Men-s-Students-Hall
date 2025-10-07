@@ -2,7 +2,7 @@
 
 import { account } from "../appwrite";
 import { getBoarderProfile } from "./boarder.actions";
-import { getStaffProfile } from "./staff.actions";
+//import { getStaffProfile } from "./staff.actions";
 
 export interface AuthUser {
   $id: string;
@@ -22,13 +22,13 @@ export interface RoleData {
  */
 export async function resolveUserRole(userId: string): Promise<RoleData | null> {
   // Run all profile fetches concurrently
-  const [ boarderProfile, staffProfile] = await Promise.all([
+  const [ boarderProfile] = await Promise.all([
     getBoarderProfile(userId),
-    getStaffProfile(userId),
+    //getStaffProfile(userId),
   ]);
 
   if (boarderProfile) return { role: "boarder", profile: boarderProfile };
-  if (staffProfile) return { role: "staff", profile: staffProfile };
+  //if (staffProfile) return { role: "staff", profile: staffProfile };
 
   return null; // No profile found
 }
@@ -42,7 +42,23 @@ export async function universalLogin(email: string, password: string) {
       throw new Error("Email and password are required");
     }
 
-    const session = await account.createEmailPasswordSession({email, password});
+    // Check if a session already exists and delete it
+    try {
+      const existingSession = await account.getSession({
+        sessionId: "current",
+      });
+      if (existingSession) {
+        await account.deleteSession({ sessionId: "current" });
+      }
+    } catch (err) {
+      console.log(err);
+      
+    }
+
+    const session = await account.createEmailPasswordSession({
+      email,
+      password,
+    });
     const user = await account.get();
 
     const roleData = await resolveUserRole(user.$id);

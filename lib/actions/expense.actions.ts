@@ -3,9 +3,20 @@ import { toISODate } from "../utils";
 
 export interface ExpenseRecord {
   $id: string;
-  managerId: string;
   date: string;
-  category: "groceries" | "other";
+  category:
+    | "fish"
+    | "chicken"
+    | "paneer"
+    | "veg"
+    | "gas"
+    | "grocery"
+    | "eggs"
+    | "rice/potato"
+    | "misc"
+    | "grand"
+    | "prev"
+    | "staff";
   amount: number;
   description: string;
   receipt?: string;
@@ -14,9 +25,20 @@ export interface ExpenseRecord {
 }
 
 export interface ExpenseCreateData {
-  managerId: string;
   date: string;
-  category: "groceries" | "other";
+  category:
+    | "fish"
+    | "chicken"
+    | "paneer"
+    | "veg"
+    | "gas"
+    | "grocery"
+    | "eggs"
+    | "rice/potato"
+    | "misc"
+    | "grand"
+    | "prev"
+    | "staff";
   amount: number;
   description: string;
   receipt?: string;
@@ -32,7 +54,6 @@ export async function createExpense(expenseData: ExpenseCreateData) {
       tableId: appwriteConfig.expensesTableId,
       rowId: ID.unique(),
       data: {
-        managerId: expenseData.managerId,
         date: toISODate(expenseData.date),
         category: expenseData.category,
         amount: expenseData.amount,
@@ -80,6 +101,38 @@ export async function getExpensesForDateRange(
 }
 
 /**
+ * Compute total expenses over an optional date range. If not provided,
+ * computes the sum of all expense rows.
+ */
+export async function getTotalExpenses(options?: {
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+}): Promise<{ success: boolean; total?: number; error?: string }> {
+  try {
+    const queries = [] as any[];
+    if (options?.startDate) {
+      queries.push(Query.greaterThanEqual("date", toISODate(options.startDate)));
+    }
+    if (options?.endDate) {
+      queries.push(Query.lessThanEqual("date", toISODate(options.endDate)));
+    }
+
+    const response = await tables.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.expensesTableId,
+      queries,
+    });
+
+    const rows = response.rows as unknown as { amount?: number }[];
+    const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
+    return { success: true, total };
+  } catch (error: any) {
+    console.error("Get total expenses error:", error);
+    return { success: false, error: error.message || "Failed to compute total expenses" };
+  }
+}
+
+/**
  * Get monthly expenses summary
  */
 export async function getMonthlyExpensesSummary(year: number, month: number) {
@@ -93,12 +146,19 @@ export async function getMonthlyExpensesSummary(year: number, month: number) {
       (sum, expense) => sum + expense.amount,
       0
     );
+    // Maintain backwards compatibility: treat "grocery" as groceriesTotal and all others as otherTotal
     const groceriesTotal = expenses
-      .filter((expense) => expense.category === "groceries")
+      .filter((expense) => expense.category === "grocery")
       .reduce((sum, expense) => sum + expense.amount, 0);
     const otherTotal = expenses
-      .filter((expense) => expense.category === "other")
+      .filter((expense) => expense.category !== "grocery")
       .reduce((sum, expense) => sum + expense.amount, 0);
+
+    // Also provide per-category totals for richer UIs (non-breaking addition)
+    const totalsByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+      acc[e.category] = (acc[e.category] || 0) + e.amount;
+      return acc;
+    }, {});
 
     return {
       success: true,
@@ -106,6 +166,7 @@ export async function getMonthlyExpensesSummary(year: number, month: number) {
         totalExpenses,
         groceriesTotal,
         otherTotal,
+        totalsByCategory,
         expenseCount: expenses.length,
         expenses,
         period: {
@@ -131,7 +192,7 @@ export async function getMonthlyExpensesSummary(year: number, month: number) {
  */
 export async function updateExpense(
   expenseId: string,
-  updates: Partial<Omit<ExpenseRecord, "$id" | "managerId" | "createdAt">>
+  updates: Partial<Omit<ExpenseRecord, "$id" | "createdAt">>
 ) {
   try {
     const updatedExpense = await tables.updateRow({

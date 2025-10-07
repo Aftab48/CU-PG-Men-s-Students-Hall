@@ -30,16 +30,17 @@ export async function getOrCreateMealRecord(
   date: string,
   mealType: "brunch" | "dinner"
 ) {
-  const isoDate = toISODate(date);
+  // Compute same-day range in ISO (UTC) to match seed style which stores full ISO datetimes
+  const { startOfDayIso, endOfDayIso } = getDayRangeIso(date);
   try {
-    // Look for existing meal row
+    // Look for existing meal row for same day and meal type
     const response = await tables.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.mealsTableId,
       queries: [
         Query.equal("boarderId", boarderId),
-        Query.equal("date", isoDate),
         Query.equal("mealType", mealType),
+        Query.between("date", startOfDayIso, endOfDayIso),
       ],
     });
 
@@ -47,14 +48,14 @@ export async function getOrCreateMealRecord(
       return response.rows[0];
     }
 
-    // Create new meal row if it doesn't exist
+    // Create new meal row if none exists; store ISO at start of local day
     const newRecord = await tables.createRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.mealsTableId,
       rowId: ID.unique(),
       data: {
         boarderId,
-        date,
+        date: startOfDayIso,
         mealType,
         status: "ON", // default
         servedByStaffId: "", // default not served
@@ -77,9 +78,8 @@ export async function toggleMealStatus(
   mealType: "brunch" | "dinner",
   status: "ON" | "OFF"
 ) {
-   const isoDate = toISODate(date);
   try {
-    const mealRecord = await getOrCreateMealRecord(boarderId, isoDate, mealType);
+    const mealRecord = await getOrCreateMealRecord(boarderId, date, mealType);
     if (!mealRecord) throw new Error("Failed to get meal record");
 
     const updatedRecord = await tables.updateRow({
@@ -96,6 +96,70 @@ export async function toggleMealStatus(
       success: false,
       error: error.message || "Failed to toggle meal status",
     };
+  }
+}
+
+/**
+ * Bulk set meal status for a boarder within a date range (inclusive) for one or both meal types.
+ * Dates are normalized to ISO (YYYY-MM-DD). Only future dates within current month should be passed by callers.
+ */
+export async function setMealStatusForDateRange(
+  boarderId: string,
+  startDate: string,
+  endDate: string,
+  options: { brunch?: boolean; dinner?: boolean; status: "ON" | "OFF" }
+) {
+  const { startOfDayIso: startIso } = getDayRangeIso(startDate);
+  const { endOfDayIso: endIso } = getDayRangeIso(endDate);
+  try {
+    const dates: string[] = [];
+    const start = new Date(startIso);
+    const end = new Date(endIso);
+    for (
+      let d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+      d <= end;
+      d.setDate(d.getDate() + 1)
+    ) {
+      // push local YYYY-MM-DD for per-day iteration; creation/search uses same-day range
+      dates.push(formatLocalYMD(d));
+    }
+
+    const results: { date: string; brunch?: any; dinner?: any; error?: string }[] = [];
+    for (const d of dates) {
+      const entry: any = { date: d };
+      try {
+        if (options.brunch) {
+          const mealRecord = await getOrCreateMealRecord(boarderId, d, "brunch");
+          if (mealRecord) {
+            entry.brunch = await tables.updateRow({
+              databaseId: appwriteConfig.databaseId,
+              tableId: appwriteConfig.mealsTableId,
+              rowId: mealRecord.$id,
+              data: { status: options.status },
+            });
+          }
+        }
+        if (options.dinner) {
+          const mealRecord = await getOrCreateMealRecord(boarderId, d, "dinner");
+          if (mealRecord) {
+            entry.dinner = await tables.updateRow({
+              databaseId: appwriteConfig.databaseId,
+              tableId: appwriteConfig.mealsTableId,
+              rowId: mealRecord.$id,
+              data: { status: options.status },
+            });
+          }
+        }
+      } catch (err: any) {
+        entry.error = err?.message || "Failed to update";
+      }
+      results.push(entry);
+    }
+
+    return { success: true, results };
+  } catch (error: any) {
+    console.error("Bulk set meal status error:", error);
+    return { success: false, error: error.message || "Failed bulk status" };
   }
 }
 
@@ -136,12 +200,15 @@ export async function markMealAsTaken(
 export async function getMealRecordsForDate(
   date: string
 ): Promise<MealRecord[]> {
-   const isoDate = toISODate(date);
+  const { startOfDayIso, endOfDayIso } = getDayRangeIso(date);
   try {
     const response = await tables.listRows({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.mealsTableId,
-      queries: [Query.equal("date", isoDate), Query.orderAsc("boarderId")],
+      queries: [
+        Query.between("date", startOfDayIso, endOfDayIso),
+        Query.orderAsc("boarderId"),
+      ],
     });
 
     return response.rows as unknown as MealRecord[];
@@ -177,12 +244,49 @@ export async function getMealRecordsForBoarder(
 }
 
 /**
+ * Count ON meals for a boarder within a date range (inclusive)
+ */
+export async function countOnMealsForBoarder(
+  boarderId: string,
+  startDate: string,
+  endDate: string
+) {
+  const { startOfDayIso: startIso } = getDayRangeIso(startDate);
+  const { endOfDayIso: endIso } = getDayRangeIso(endDate);
+  try {
+    const response = await tables.listRows({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.mealsTableId,
+      queries: [
+        Query.equal("boarderId", boarderId),
+        Query.between("date", startIso, endIso),
+        Query.equal("status", "ON"),
+      ],
+    });
+
+    return { success: true, count: response.rows.length };
+  } catch (error: any) {
+    console.error("Count ON meals for boarder error:", error);
+    return { success: false, count: 0, error: error.message || "Failed to count meals" };
+  }
+}
+
+/**
+ * Count ON meals for the current month up to today
+ */
+export async function countCurrentMonthMealsForBoarder(boarderId: string) {
+  const now = new Date();
+  const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endDate = new Date();
+  return countOnMealsForBoarder(boarderId, formatLocalYMD(startDate), formatLocalYMD(endDate));
+}
+
+/**
  * Get meal count statistics for a specific date and meal preference
  */
 export async function getMealCountStats(date: string) {
-  const isoDate = toISODate(date);
   try {
-    const mealRecords = await getMealRecordsForDate(isoDate);
+    const mealRecords = await getMealRecordsForDate(date);
 
     const boardersResponse = await tables.listRows({
       databaseId: appwriteConfig.databaseId,
@@ -248,4 +352,31 @@ export async function getMealCountStats(date: string) {
       stats: null,
     };
   }
+}
+
+// Helpers
+function formatLocalYMD(d: Date): string {
+  const year = d.getFullYear();
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDayRangeIso(input: string): { startOfDayIso: string; endOfDayIso: string } {
+  // Input can be YYYY-MM-DD or full ISO
+  let year: number, month: number, day: number;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(input)) {
+    const [y, m, d] = input.split("-").map((v) => parseInt(v, 10));
+    year = y;
+    month = m - 1;
+    day = d;
+  } else {
+    const dt = new Date(input);
+    year = dt.getFullYear();
+    month = dt.getMonth();
+    day = dt.getDate();
+  }
+  const start = new Date(year, month, day, 0, 0, 0, 0);
+  const end = new Date(year, month, day, 23, 59, 59, 999);
+  return { startOfDayIso: start.toISOString(), endOfDayIso: end.toISOString() };
 }

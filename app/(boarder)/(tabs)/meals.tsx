@@ -8,6 +8,7 @@ import {
 } from "@/lib/actions";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { Calendar, Clock, Coffee, Moon, Sun, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -33,11 +34,13 @@ export default function BoarderMealTracker() {
 
   const { user } = useAuthStore();
 
+
   useEffect(() => {
     if (user) {
       loadMealRecord();
       loadBoarderProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedDate]);
 
   const loadMealRecord = async () => {
@@ -45,8 +48,21 @@ export default function BoarderMealTracker() {
 
     setLoading(true);
     try {
-      const record = await getOrCreateMealRecord(user.id, selectedDate);
-      setMealRecord(record || { brunch: false, dinner: false }); // fallback
+      const brunchRecord = await getOrCreateMealRecord(
+        user.id,
+        selectedDate,
+        "brunch"
+      );
+      const dinnerRecord = await getOrCreateMealRecord(
+        user.id,
+        selectedDate,
+        "dinner"
+      );
+
+      setMealRecord({
+        brunch: brunchRecord?.status === "ON",
+        dinner: dinnerRecord?.status === "ON",
+      });
     } catch (error) {
       console.error("Failed to load meal record:", error);
       setMealRecord({ brunch: false, dinner: false });
@@ -74,79 +90,36 @@ export default function BoarderMealTracker() {
     dinner: mealRecord?.dinner ?? false,
   };
 
-  const handleMealToggle = async (mealType: "brunch" | "dinner") => {
-    if (!user || !mealRecord) return;
+  const handleMealToggle = async (
+    mealType: "brunch" | "dinner",
+    date: string = selectedDate
+  ) => {
+    if (!user) return;
 
     setLoading(true);
     try {
-      const newStatus = !todayMeals[mealType];
-      const result = await toggleMealStatus({
-        boarderId: user.id,
-        date: selectedDate,
-        mealType,
-        status: newStatus,
-      });
+      // Get the meal record for the given date
+      const mealRecordForDate = await getOrCreateMealRecord(
+        user.id,
+        date,
+        mealType
+      );
+      if (!mealRecordForDate) throw new Error("Failed to get meal record");
+
+      // Determine new status
+      const newStatus = mealRecordForDate.status === "ON" ? "OFF" : "ON";
+
+      // Toggle status in backend
+      const result = await toggleMealStatus(user.id, date, mealType, newStatus);
 
       if (result.success) {
-        await loadMealRecord();
+        // Reload today’s meals only if the toggled date is today
+        if (date === selectedDate) await loadMealRecord();
       } else {
         Alert.alert("Error", result.error || "Failed to update meal status");
       }
     } catch (error: any) {
       Alert.alert("Error", error.message || "Failed to update meal status");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSkipTonight = async () => {
-    if (!user || !mealRecord) return;
-
-    setLoading(true);
-    try {
-      const result = await toggleMealStatus({
-        boarderId: user.id,
-        date: selectedDate,
-        mealType: "dinner",
-        status: false,
-      });
-
-      if (result.success) {
-        await loadMealRecord();
-        Alert.alert("Success", "Dinner skipped for tonight");
-      } else {
-        Alert.alert("Error", result.error || "Failed to skip dinner");
-      }
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to skip dinner");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSkipTomorrow = async () => {
-    if (!user || !mealRecord) return;
-
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
-    setLoading(true);
-    try {
-      const result = await toggleMealStatus({
-        boarderId: user.id,
-        date: tomorrowStr,
-        mealType: "brunch",
-        status: false,
-      });
-
-      if (result.success) {
-        Alert.alert("Success", "Brunch skipped for tomorrow morning");
-      } else {
-        Alert.alert("Error", result.error || "Failed to skip brunch");
-      }
-    } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to skip brunch");
     } finally {
       setLoading(false);
     }
@@ -280,36 +253,58 @@ export default function BoarderMealTracker() {
           Quick Actions
         </Text>
 
+        {/* Toggle Tonight's Dinner */}
         <TouchableOpacity
           className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 mb-3 gap-3"
-          onPress={handleSkipTonight}
+          onPress={() => handleMealToggle("dinner")}
           disabled={loading || !mealRecord}
         >
           <Moon size={20} color="#ea580c" />
           <Text className="text-base font-medium text-orange-600">
-            Skip Tonight&apos;s Dinner
+            {todayMeals.dinner
+              ? "Skip Tonight's Dinner"
+              : "Turn On Tonight's Dinner"}
           </Text>
         </TouchableOpacity>
 
+        {/* Toggle Tomorrow's Brunch */}
         <TouchableOpacity
           className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 mb-3 gap-3"
-          onPress={handleSkipTomorrow}
+          onPress={async () => {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+            // Fetch tomorrow’s brunch record to check its status
+            const brunchRecord = await getOrCreateMealRecord(
+              user!.id,
+              tomorrowStr,
+              "brunch"
+            );
+            if (!brunchRecord) return;
+
+            const newStatus = brunchRecord.status === "ON" ? "OFF" : "ON";
+            await handleMealToggle("brunch", tomorrowStr);
+
+            // Optionally reload if you want to reflect it right away
+            if (newStatus === "ON") {
+              Alert.alert("Brunch turned ON for tomorrow!");
+            } else {
+              Alert.alert("Brunch turned OFF for tomorrow!");
+            }
+          }}
           disabled={loading || !mealRecord}
         >
           <Coffee size={20} color="#ea580c" />
           <Text className="text-base font-medium text-orange-600">
-            Skip Tomorrow&apos;s Brunch
+            {/** This label changes based on tomorrow’s brunch status dynamically after toggle */}
+            Skip / Turn On Tomorrow&apos;s Brunch
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 gap-3"
-          onPress={() =>
-            Alert.alert(
-              "Coming Soon",
-              "Date range selection will be available soon"
-            )
-          }
+          onPress={() => router.push("/(boarder)/skip-range")}
         >
           <Calendar size={20} color="#ea580c" />
           <Text className="text-base font-medium text-orange-600">
@@ -400,6 +395,9 @@ export default function BoarderMealTracker() {
   return (
     <ScrollView className="flex-1 bg-slate-50">
       <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
+        <Text className="text-2xl font-bold justify-center items-center text-white">
+          Welcome <Text className="text-emerald-200">{boarderProfile?.name}</Text>
+        </Text>
         <Text className="text-2xl font-bold text-white">Food Dashboard</Text>
         <Text className="text-base text-slate-200 mt-1">
           Manage your meals and preferences

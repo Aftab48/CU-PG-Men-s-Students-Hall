@@ -1,5 +1,6 @@
 // app/(manager)/(tabs)/summary.tsx
 
+import { getAllActiveBoarders, getExpensesForDateRange, getTotalExpenses } from "@/lib/actions";
 import { useExpenseStore } from "@/stores/expense-store";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -9,7 +10,7 @@ import {
   FileText,
   Receipt,
 } from "lucide-react-native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -18,39 +19,109 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+let FileSystem: any = null, Sharing: any = null;
+try {
+  // Dynamically require to avoid crashes if module not installed yet
+  // @ts-ignore
+  FileSystem = require("expo-file-system");
+  // @ts-ignore
+  Sharing = require("expo-sharing");
+} catch {}
 
 export default function MonthlySummaryScreen() {
   const expenses = useExpenseStore((state) => state.expenses);
+  const [totalFunding, setTotalFunding] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
 
-  const monthlyData = useMemo(() => {
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  useEffect(() => {
+    const loadTotals = async () => {
+      setLoading(true);
+      try {
+        // Sum of advance from all active boarders
+        const boarders = await getAllActiveBoarders();
+        const funding = (boarders || []).reduce(
+          (sum: number, b: any) => sum + (b.advance || 0),
+          0
+        );
+        setTotalFunding(funding);
 
-    const recentExpenses = expenses.filter((expense) => {
-      const expenseDate = new Date(expense.date);
-      return expenseDate >= thirtyDaysAgo && expenseDate <= now;
-    });
+        // Sum of all expenses (optionally, you could limit to last 30 days)
+        const expensesTotalRes = await getTotalExpenses();
+        setTotalExpenses(expensesTotalRes.total || 0);
 
-    const totalExpenses = recentExpenses.reduce(
-      (sum, expense) => sum + expense.amount,
-      0
-    );
-    const totalFunding = 50000; // This would come from settings
-    const remainingBalance = totalFunding - totalExpenses;
-
-    return {
-      expenses: recentExpenses,
-      totalExpenses,
-      totalFunding,
-      remainingBalance,
+        // Fetch recent (last 30 days) expenses from backend
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const start = thirtyDaysAgo.toISOString().split("T")[0];
+        const end = now.toISOString().split("T")[0];
+        const rows = await getExpensesForDateRange(start, end);
+        const mapped = (rows || [])
+          .map((r: any) => ({
+            id: r.$id ?? r.id,
+            date: r.date,
+            category: r.category,
+            amount: r.amount,
+            description: r.description,
+            receipt: r.receipt,
+            createdAt: r.$createdAt ?? r.createdAt,
+          }))
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setRecentExpenses(mapped);
+      } catch {
+        setTotalFunding(0);
+        setTotalExpenses(0);
+      } finally {
+        setLoading(false);
+      }
     };
-  }, [expenses]);
+    loadTotals();
+  }, []);
 
-  const handleExportCSV = () => {
-    Alert.alert(
-      "Export CSV",
-      "CSV export functionality would be implemented here"
-    );
+  const remainingBalance = useMemo(
+    () => totalFunding - totalExpenses,
+    [totalFunding, totalExpenses]
+  );
+
+  // recentExpenses now comes from backend
+
+  const handleExportCSV = async () => {
+    try {
+      const header = [
+        "id,date,category,amount,description,receipt,createdAt",
+      ];
+      const rows = recentExpenses.map((e) =>
+        [
+          e.id,
+          e.date,
+          e.category,
+          e.amount,
+          JSON.stringify(e.description || ""),
+          JSON.stringify(e.receipt || ""),
+          e.createdAt || "",
+        ].join(",")
+      );
+      const csv = [...header, ...rows].join("\n");
+
+      if (!FileSystem || !Sharing) {
+        Alert.alert("Export CSV", "Export modules not available in this build.");
+        return;
+      }
+
+      const fileUri = `${FileSystem.documentDirectory}expenses.csv`;
+      await FileSystem.writeAsStringAsync(fileUri, csv, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, { mimeType: "text/csv" });
+      } else {
+        Alert.alert("Export CSV", `Saved to: ${fileUri}`);
+      }
+    } catch (err: any) {
+      Alert.alert("Export CSV Failed", err?.message || "Unknown error");
+    }
   };
 
   const handleMakePublic = () => {
@@ -75,13 +146,13 @@ export default function MonthlySummaryScreen() {
           <View className="bg-white rounded-xl p-4 shadow-sm">
             <Text className="text-sm text-gray-600 mb-1">Total Funding</Text>
             <Text className="text-2xl font-bold text-blue-700">
-              ₹{monthlyData.totalFunding.toLocaleString()}
+              ₹{(loading ? 0 : totalFunding).toLocaleString()}
             </Text>
           </View>
           <View className="bg-white rounded-xl p-4 shadow-sm">
             <Text className="text-sm text-gray-600 mb-1">Total Expenses</Text>
             <Text className="text-2xl font-bold text-red-600">
-              ₹{monthlyData.totalExpenses.toLocaleString()}
+              ₹{(loading ? 0 : totalExpenses).toLocaleString()}
             </Text>
           </View>
           <View className="bg-white rounded-xl p-4 shadow-sm">
@@ -90,12 +161,12 @@ export default function MonthlySummaryScreen() {
             </Text>
             <Text
               className={`text-2xl font-bold ${
-                monthlyData.remainingBalance >= 0
+                remainingBalance >= 0
                   ? "text-emerald-600"
                   : "text-red-600"
               }`}
             >
-              ₹{monthlyData.remainingBalance.toLocaleString()}
+              ₹{(loading ? 0 : remainingBalance).toLocaleString()}
             </Text>
           </View>
         </View>
@@ -127,7 +198,7 @@ export default function MonthlySummaryScreen() {
           <Text className="text-lg font-semibold text-gray-800 mb-4">
             Recent Expenses
           </Text>
-          {monthlyData.expenses.length === 0 ? (
+          {recentExpenses.length === 0 ? (
             <View className="items-center py-10">
               <FileText size={48} color="#9ca3af" />
               <Text className="text-base text-gray-600 mt-3">
@@ -135,7 +206,7 @@ export default function MonthlySummaryScreen() {
               </Text>
             </View>
           ) : (
-            monthlyData.expenses.map((expense) => (
+            recentExpenses.map((expense: any) => (
               <View key={expense.id} className="border-b border-gray-100 py-4">
                 <View className="flex-row justify-between items-start">
                   <View className="flex-1 mr-3">
