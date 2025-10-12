@@ -132,6 +132,7 @@ function BoarderLoginScreen() {
         tempUserData.$id,
         tempUserData.name,
         tempUserData.email,
+        password,
         {
           phoneNum: phoneNum.trim(),
           roomNum: roomNum.trim(),

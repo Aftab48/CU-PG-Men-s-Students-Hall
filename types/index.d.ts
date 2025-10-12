@@ -3,8 +3,8 @@ export interface BoarderSignupData {
   email: string;
   password: string;
   phone?: string;
-  roomNumber?: string;
-  advancePayment?: number;
+  roomNum?: string;
+  advance?: number;
 }
 
 export interface BoarderProfile {
@@ -12,11 +12,14 @@ export interface BoarderProfile {
   userId: string;
   name: string;
   email: string;
+  password: string;
   phone?: string;
   roomNumber?: string;
-  advancePayment: number;
-  currentBalance: number;
+  advance: number;
+  current: number;
   isActive: boolean;
+  mealPreference: "veg" | "non-veg" | "egg" | "fish";
+  avatarUrl: URL;
 }
 
 export interface ManagerProfile {

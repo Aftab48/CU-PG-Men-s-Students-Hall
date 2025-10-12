@@ -212,22 +212,6 @@ function UpdateBoarderPassword() {
                     </TouchableOpacity>
                   </>
                 ) : null}
-
-                <TouchableOpacity
-                  className={`bg-orange-600 rounded-xl py-4 items-center mt-3 ${
-                    loading ? "opacity-60" : ""
-                  }`}
-                  onPress={handleChangePassword}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text className="text-white text-base font-semibold">
-                      Update Password
-                    </Text>
-                  )}
-                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>

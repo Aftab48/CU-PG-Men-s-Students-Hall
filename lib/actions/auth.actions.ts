@@ -1,6 +1,6 @@
 // lib/actions/auth.actions.ts
 
-import { account } from "../appwrite";
+import { account, appwriteConfig, tables } from "../appwrite";
 import { getBoarderProfile, getBoarderProfileByEmail } from "./boarder.actions";
 //import { getStaffProfile } from "./staff.actions";
 
@@ -175,7 +175,7 @@ export async function updateCurrentUserPassword(
 
 /**
  * Email-first flow: verify boarder by email to greet, then update with current password
- * This does NOT store email-password; it only uses email to fetch profile for greeting.
+ * Updates both auth system and boarders table password
  */
 export async function updatePasswordWithEmailFlow(
   email: string,
@@ -190,6 +190,20 @@ export async function updatePasswordWithEmailFlow(
     // perform the password update using current session or provided current password
     const result = await updateCurrentUserPassword(currentPassword, newPassword);
     if (!result.success) return result;
+
+    // Also update the password in the boarders table
+    try {
+      await tables.updateRow({
+        databaseId: appwriteConfig.databaseId,
+        tableId: appwriteConfig.boardersTableId,
+        rowId: profile.$id,
+        data: { password: newPassword },
+      });
+    } catch (tableError: any) {
+      console.error("Failed to update password in boarders table:", tableError);
+      // Don't fail the entire operation if table update fails
+      // The auth password was updated successfully
+    }
 
     return { success: true, name: profile.name, message: result.message };
   } catch (error: any) {

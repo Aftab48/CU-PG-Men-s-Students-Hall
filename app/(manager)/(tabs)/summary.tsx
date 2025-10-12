@@ -1,26 +1,27 @@
 // app/(manager)/(tabs)/summary.tsx
 
-import { getAllActiveBoarders, getExpensesForDateRange, getTotalExpenses } from "@/lib/actions";
+import { getBoarderProfileById, getExpensesForDateRange, getPaymentsForDateRange, getTotalExpenses, getTotalPayments } from "@/lib/actions";
 import { formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-  Calendar,
-  Download,
-  Eye,
-  FileText,
-  LogOut,
-  Receipt,
+    Calendar,
+    Download,
+    Eye,
+    FileText,
+    LogOut,
+    Receipt,
+    User,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Alert,
-  Image,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Image,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 export default function MonthlySummaryScreen() {
@@ -37,6 +38,8 @@ export default function MonthlySummaryScreen() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
+  const [recentPayments, setRecentPayments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"expenses" | "funding">("expenses");
 
   useEffect(() => {
     const loadModules = async () => {
@@ -62,15 +65,11 @@ export default function MonthlySummaryScreen() {
     const loadTotals = async () => {
       setLoading(true);
       try {
-        // Sum of advance from all active boarders
-        const boarders = await getAllActiveBoarders();
-        const funding = (boarders || []).reduce(
-          (sum: number, b: any) => sum + (b.advance || 0),
-          0
-        );
-        setTotalFunding(funding);
+        // Calculate total funding from payments table
+        const paymentsTotalRes = await getTotalPayments();
+        setTotalFunding(paymentsTotalRes.total || 0);
 
-        // Sum of all expenses (optionally, you could limit to last 30 days)
+        // Sum of all expenses
         const expensesTotalRes = await getTotalExpenses();
         setTotalExpenses(expensesTotalRes.total || 0);
 
@@ -80,8 +79,10 @@ export default function MonthlySummaryScreen() {
         // Use local date formatting instead of UTC
         const start = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(thirtyDaysAgo.getDate()).padStart(2, "0")}`;
         const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-        const rows = await getExpensesForDateRange(start, end);
-        const mapped = (rows || [])
+        
+        // Fetch expenses
+        const expenseRows = await getExpensesForDateRange(start, end);
+        const mappedExpenses = (expenseRows || [])
           .map((r: any) => ({
             id: r.$id ?? r.id,
             date: r.date,
@@ -92,8 +93,38 @@ export default function MonthlySummaryScreen() {
             createdAt: r.$createdAt ?? r.createdAt,
           }))
           .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setRecentExpenses(mapped);
-      } catch {
+        setRecentExpenses(mappedExpenses);
+
+        // Fetch payments
+        const paymentRows = await getPaymentsForDateRange(start, end);
+        const mappedPayments = await Promise.all(
+          (paymentRows || []).map(async (p: any) => {
+            // Fetch boarder name using profile ID ($id)
+            let boarderName = "Unknown";
+            try {
+              const boarder = await getBoarderProfileById(p.boarderId);
+              boarderName = boarder?.name || "Unknown";
+            } catch (err) {
+              console.error("Error fetching boarder:", err);
+            }
+            return {
+              id: p.$id,
+              amount: p.amount,
+              boarderId: p.boarderId,
+              boarderName,
+              paymentURL: p.paymentURL,
+              createdAt: p.$createdAt,
+            };
+          })
+        );
+        setRecentPayments(
+          mappedPayments.sort(
+            (a: any, b: any) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        );
+      } catch (err) {
+        console.error("Error loading data:", err);
         setTotalFunding(0);
         setTotalExpenses(0);
       } finally {
@@ -112,28 +143,50 @@ export default function MonthlySummaryScreen() {
 
   const handleExportCSV = async () => {
     try {
-      const header = [
-        "id,date,category,amount,description,receipt,createdAt",
-      ];
-      const rows = recentExpenses.map((e) =>
-        [
-          e.id,
-          e.date,
-          e.category,
-          e.amount,
-          JSON.stringify(e.description || ""),
-          JSON.stringify(e.receipt || ""),
-          e.createdAt || "",
-        ].join(",")
-      );
-      const csv = [...header, ...rows].join("\n");
-
       if (!FileSystem || !Sharing) {
         Alert.alert("Export CSV", "Export modules not available in this build.");
         return;
       }
 
-      const fileUri = `${FileSystem.documentDirectory}expenses.csv`;
+      let csv = "";
+      let fileName = "";
+
+      if (activeTab === "expenses") {
+        const header = [
+          "id,date,category,amount,description,receipt,createdAt",
+        ];
+        const rows = recentExpenses.map((e) =>
+          [
+            e.id,
+            e.date,
+            e.category,
+            e.amount,
+            JSON.stringify(e.description || ""),
+            JSON.stringify(e.receipt || ""),
+            e.createdAt || "",
+          ].join(",")
+        );
+        csv = [...header, ...rows].join("\n");
+        fileName = "expenses.csv";
+      } else {
+        const header = [
+          "id,boarderId,boarderName,amount,paymentURL,createdAt",
+        ];
+        const rows = recentPayments.map((p) =>
+          [
+            p.id,
+            p.boarderId,
+            JSON.stringify(p.boarderName || ""),
+            p.amount,
+            JSON.stringify(p.paymentURL || ""),
+            p.createdAt || "",
+          ].join(",")
+        );
+        csv = [...header, ...rows].join("\n");
+        fileName = "payments.csv";
+      }
+
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       await FileSystem.writeAsStringAsync(fileUri, csv);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
@@ -203,6 +256,42 @@ export default function MonthlySummaryScreen() {
           </View>
         </View>
 
+        {/* Tabs */}
+        <View className="flex-row gap-2.5 sm:gap-3 mb-4 sm:mb-5">
+          <TouchableOpacity
+            className={`flex-1 py-2.5 sm:py-3 rounded-lg ${
+              activeTab === "expenses"
+                ? "bg-primary"
+                : "bg-white"
+            }`}
+            onPress={() => setActiveTab("expenses")}
+          >
+            <Text
+              className={`text-center text-sm sm:text-base font-medium ${
+                activeTab === "expenses" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              Expenses
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className={`flex-1 py-2.5 sm:py-3 rounded-lg ${
+              activeTab === "funding"
+                ? "bg-primary"
+                : "bg-white"
+            }`}
+            onPress={() => setActiveTab("funding")}
+          >
+            <Text
+              className={`text-center text-sm sm:text-base font-medium ${
+                activeTab === "funding" ? "text-white" : "text-gray-700"
+              }`}
+            >
+              Funding
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Action Buttons */}
         <View className="flex-row gap-2.5 sm:gap-3 mb-5 sm:mb-6">
           <TouchableOpacity
@@ -225,56 +314,108 @@ export default function MonthlySummaryScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Expenses List */}
-        <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
-          <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
-            Recent Expenses
-          </Text>
-          {recentExpenses.length === 0 ? (
-            <View className="items-center py-8 sm:py-10">
-              <FileText size={40} color="#9ca3af" />
-              <Text className="text-sm sm:text-base text-gray-100 mt-2.5 sm:mt-3">
-                No expenses recorded yet
-              </Text>
-            </View>
-          ) : (
-            recentExpenses.map((expense: any) => (
-              <View key={expense.id} className="border-b border-gray-100 py-3 sm:py-4">
-                <View className="flex-row justify-between items-start">
-                  <View className="flex-1 mr-2.5 sm:mr-3">
-                    <Text className="text-sm sm:text-base md:text-lg font-medium text-dark-100 mb-0.5 sm:mb-1">
-                      {expense.description}
-                    </Text>
-                    <View className="flex-row items-center gap-0.5 sm:gap-1">
-                      <Calendar size={12} color="#6b7280" />
-                      <Text className="text-[10px] sm:text-xs text-gray-100">
-                        {formatDateForDisplay(expense.date)}
-                      </Text>
-                      <Text className="text-[10px] sm:text-xs text-gray-100 capitalize">
-                        • {expense.category}
-                      </Text>
-                    </View>
-                  </View>
-                  <Text className="text-base sm:text-lg md:text-xl font-bold text-red-600">
-                    ₹{expense.amount.toLocaleString()}
-                  </Text>
-                </View>
-                {expense.receipt && (
-                  <View className="flex-row items-center mt-1.5 sm:mt-2 gap-1.5 sm:gap-2">
-                    <Receipt size={14} color="#6b7280" />
-                    <Text className="text-[10px] sm:text-xs text-gray-100 flex-1">
-                      Receipt attached
-                    </Text>
-                    <Image
-                      source={{ uri: expense.receipt }}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded"
-                    />
-                  </View>
-                )}
+        {/* Tab Content */}
+        {activeTab === "expenses" ? (
+          <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
+            <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
+              Recent Expenses
+            </Text>
+            {recentExpenses.length === 0 ? (
+              <View className="items-center py-8 sm:py-10">
+                <FileText size={40} color="#9ca3af" />
+                <Text className="text-sm sm:text-base text-gray-100 mt-2.5 sm:mt-3">
+                  No expenses recorded yet
+                </Text>
               </View>
-            ))
-          )}
-        </View>
+            ) : (
+              recentExpenses.map((expense: any) => (
+                <View key={expense.id} className="border-b border-gray-100 py-3 sm:py-4">
+                  <View className="flex-row justify-between items-start">
+                    <View className="flex-1 mr-2.5 sm:mr-3">
+                      <Text className="text-sm sm:text-base md:text-lg font-medium text-dark-100 mb-0.5 sm:mb-1">
+                        {expense.description}
+                      </Text>
+                      <View className="flex-row items-center gap-0.5 sm:gap-1">
+                        <Calendar size={12} color="#6b7280" />
+                        <Text className="text-[10px] sm:text-xs text-gray-100">
+                          {formatDateForDisplay(expense.date)}
+                        </Text>
+                        <Text className="text-[10px] sm:text-xs text-gray-100 capitalize">
+                          • {expense.category}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-base sm:text-lg md:text-xl font-bold text-red-600">
+                      ₹{expense.amount.toLocaleString()}
+                    </Text>
+                  </View>
+                  {expense.receipt && (
+                    <View className="flex-row items-center mt-1.5 sm:mt-2 gap-1.5 sm:gap-2">
+                      <Receipt size={14} color="#6b7280" />
+                      <Text className="text-[10px] sm:text-xs text-gray-100 flex-1">
+                        Receipt attached
+                      </Text>
+                      <Image
+                        source={{ uri: expense.receipt }}
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded"
+                      />
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        ) : (
+          <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
+            <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
+              Recent Funding
+            </Text>
+            {recentPayments.length === 0 ? (
+              <View className="items-center py-8 sm:py-10">
+                <FileText size={40} color="#9ca3af" />
+                <Text className="text-sm sm:text-base text-gray-100 mt-2.5 sm:mt-3">
+                  No payments recorded yet
+                </Text>
+              </View>
+            ) : (
+              recentPayments.map((payment: any) => (
+                <View key={payment.id} className="border-b border-gray-100 py-3 sm:py-4">
+                  <View className="flex-row justify-between items-start">
+                    <View className="flex-1 mr-2.5 sm:mr-3">
+                      <View className="flex-row items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                        <User size={14} color="#3B82F6" />
+                        <Text className="text-sm sm:text-base md:text-lg font-medium text-dark-100">
+                          {payment.boarderName}
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center gap-0.5 sm:gap-1">
+                        <Calendar size={12} color="#6b7280" />
+                        <Text className="text-[10px] sm:text-xs text-gray-100">
+                          {formatDateForDisplay(payment.createdAt)}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text className="text-base sm:text-lg md:text-xl font-bold text-success">
+                      ₹{payment.amount.toLocaleString()}
+                    </Text>
+                  </View>
+                  {payment.paymentURL && (
+                    <View className="flex-row items-center mt-1.5 sm:mt-2 gap-1.5 sm:gap-2">
+                      <Receipt size={14} color="#6b7280" />
+                      <Text className="text-[10px] sm:text-xs text-gray-100 flex-1">
+                        Payment proof attached
+                      </Text>
+                      <Image
+                        source={{ uri: payment.paymentURL }}
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded"
+                      />
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </View>
+        )}
       </View>
     </ScrollView>
   );

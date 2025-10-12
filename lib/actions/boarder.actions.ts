@@ -27,6 +27,7 @@ export interface BoarderProfile {
   userId: string;
   name: string;
   email: string;
+  password: string;
   phone?: string;
   roomNumber?: string;
   advance: number;
@@ -68,6 +69,7 @@ export async function signUpBoarderStep2(
   userId: string,
   name: string,
   email: string,
+  password: string,
   profileData: BoarderSignupStep2Data
 ) {
   try {
@@ -84,6 +86,7 @@ export async function signUpBoarderStep2(
         userId,
         name,
         email,
+        password,
         phone: profileData.phoneNum,
         roomNum: profileData.roomNum,
         advance: profileData.advance,
@@ -135,6 +138,26 @@ export async function getBoarderProfile(
 
   } catch (error: any) {
     console.error("Get boarder profile error:", error);
+    return null;
+  }
+}
+
+/**
+ * Get boarder profile by profile ID ($id)
+ */
+export async function getBoarderProfileById(
+  profileId: string
+): Promise<BoarderProfile | null> {
+  try {
+    const response = await tables.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+    });
+
+    return response as unknown as BoarderProfile;
+  } catch (error: any) {
+    console.error("Get boarder profile by ID error:", error);
     return null;
   }
 }

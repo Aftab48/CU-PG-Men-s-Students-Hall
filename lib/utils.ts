@@ -8,29 +8,32 @@ export const formatIndianDate = (date: Date) => {
 };
 
 /**
- * Format a date string from YYYY-MM-DD to DD-MM-YYYY for display
- * @param dateString - Date string in YYYY-MM-DD format
+ * Format a date string from YYYY-MM-DD or ISO timestamp to DD-MM-YYYY for display
+ * @param dateString - Date string in YYYY-MM-DD format or ISO timestamp
  * @returns Date string in DD-MM-YYYY format
  */
 export const formatDateForDisplay = (dateString: string): string => {
+  if (!dateString) return "";
+  
   // If date is already in DD-MM-YYYY format, return as is
   if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
     return dateString;
   }
   
-  // Parse YYYY-MM-DD format
-  const parts = dateString.split("-");
-  if (parts.length === 3) {
-    const [year, month, day] = parts;
+  // Parse YYYY-MM-DD format (simple date strings)
+  if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateString.split("-");
     return `${day}-${month}-${year}`;
   }
   
-  // Fallback: try parsing as Date object
+  // Handle ISO timestamps (e.g., 2024-01-15T10:30:00.000Z)
+  // or any other date format by parsing as Date object
   const date = new Date(dateString);
   if (!isNaN(date.getTime())) {
     return formatIndianDate(date);
   }
   
+  // If all parsing fails, return original string
   return dateString;
 };
 
