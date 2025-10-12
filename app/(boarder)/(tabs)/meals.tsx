@@ -10,7 +10,7 @@ import { canTurnOffMeal, formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Calendar, Clock, Coffee, Lock, LogOut, Moon, Sun, User } from "lucide-react-native";
+import { Beef, Calendar, Clock, Coffee, Egg, Fish, Leaf, Lock, LogOut, Moon, Sun, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -426,49 +426,68 @@ function BoarderMealTracker() {
       </Text>
 
       <View className="gap-2.5 sm:gap-3">
-        {(["veg", "non-veg", "egg", "fish"] as const).map((pref) => (
-          <TouchableOpacity
-            key={pref}
-            className={`flex-row items-center justify-between py-3 px-3 sm:py-4 sm:px-4 rounded-xl border-2 ${
-              mealPreference === pref
-                ? "bg-blue-50 border-primary"
-                : "border-gray-200"
-            }`}
-            onPress={() => handleUpdateMealPreference(pref)}
-            disabled={loading || !boarderProfile}
-          >
-            <View className="flex-row items-center">
-              <View
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full items-center justify-center mr-2.5 sm:mr-3 ${
-                  mealPreference === pref ? "bg-primary" : "bg-gray-100"
-                }`}
-              >
-                <User
-                  size={18}
-                  color={mealPreference === pref ? "#ffffff" : "#6b7280"}
-                />
-              </View>
-              <Text
-                className={`text-sm sm:text-base md:text-lg font-medium ${
-                  mealPreference === pref ? "text-primary" : "text-dark-100"
-                }`}
-              >
-                {pref.charAt(0).toUpperCase() + pref.slice(1).replace("-", " ")}
-              </Text>
-            </View>
-            <View
-              className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full border-2 items-center justify-center ${
+        {(["veg", "non-veg", "egg", "fish"] as const).map((pref) => {
+          const getIcon = () => {
+            switch (pref) {
+              case "veg":
+                return Leaf;
+              case "non-veg":
+                return Beef;
+              case "egg":
+                return Egg;
+              case "fish":
+                return Fish;
+              default:
+                return User;
+            }
+          };
+          
+          const IconComponent = getIcon();
+          
+          return (
+            <TouchableOpacity
+              key={pref}
+              className={`flex-row items-center justify-between py-3 px-3 sm:py-4 sm:px-4 rounded-xl border-2 ${
                 mealPreference === pref
-                  ? "bg-primary border-primary"
-                  : "border-gray-300"
+                  ? "bg-blue-50 border-primary"
+                  : "border-gray-200"
               }`}
+              onPress={() => handleUpdateMealPreference(pref)}
+              disabled={loading || !boarderProfile}
             >
-              {mealPreference === pref && (
-                <Text className="text-white text-xs font-bold">✓</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View className="flex-row items-center">
+                <View
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full items-center justify-center mr-2.5 sm:mr-3 ${
+                    mealPreference === pref ? "bg-primary" : "bg-gray-200"
+                  }`}
+                >
+                  <IconComponent
+                    size={18}
+                    color={mealPreference === pref ? "#ffffff" : "#374151"}
+                  />
+                </View>
+                <Text
+                  className={`text-sm sm:text-base md:text-lg font-medium ${
+                    mealPreference === pref ? "text-primary" : "text-dark-100"
+                  }`}
+                >
+                  {pref.charAt(0).toUpperCase() + pref.slice(1).replace("-", " ")}
+                </Text>
+              </View>
+              <View
+                className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full border-2 items-center justify-center ${
+                  mealPreference === pref
+                    ? "bg-primary border-primary"
+                    : "border-gray-300"
+                }`}
+              >
+                {mealPreference === pref && (
+                  <Text className="text-white text-xs font-bold">✓</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {boarderProfile && (
