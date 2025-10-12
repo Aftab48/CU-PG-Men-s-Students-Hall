@@ -13,7 +13,6 @@ import {
   Eye,
   EyeOff,
   Home,
-  IndianRupee,
   Lock,
   Mail,
   Phone,
@@ -48,8 +47,6 @@ function BoarderLoginScreen() {
   const [mealPreference, setMealPreference] = useState<
     "veg" | "non-veg" | "egg" | "fish"
   >("veg");
-  const [advance, setAdvance] = useState("");
-  const [current, setCurrent] = useState("0");
 
   const [tempUserData, setTempUserData] = useState<any>(null);
 
@@ -124,20 +121,8 @@ function BoarderLoginScreen() {
   };
 
   const handleSignupStep2 = async () => {
-    if (!phoneNum.trim() || !roomNum.trim() || !advance.trim()) {
+    if (!phoneNum.trim() || !roomNum.trim()) {
       Alert.alert("Error", "Please fill in all required fields");
-      return;
-    }
-
-    const advanceAmount = parseFloat(advance);
-    const currentAmount = parseFloat(current);
-
-    if (isNaN(advanceAmount) || advanceAmount < 0) {
-      Alert.alert("Error", "Please enter a valid advance amount");
-      return;
-    }
-    if (isNaN(currentAmount) || currentAmount < 0) {
-      Alert.alert("Error", "Please enter a valid current balance");
       return;
     }
 
@@ -151,8 +136,8 @@ function BoarderLoginScreen() {
           phoneNum: phoneNum.trim(),
           roomNum: roomNum.trim(),
           mealPreference,
-          advance: advanceAmount,
-          current: currentAmount,
+          advance: 0,
+          current: 0,
         }
       );
       if (result.success) {
@@ -167,8 +152,6 @@ function BoarderLoginScreen() {
               setName("");
               setPhoneNum("");
               setRoomNum("");
-              setAdvance("");
-              setCurrent("0");
               setTempUserData(null);
             },
           },
@@ -188,8 +171,8 @@ function BoarderLoginScreen() {
 
   // ------------------------- JSX -------------------------
   return (
-    <SafeAreaView className="flex-1">
-      <LinearGradient colors={["#059669", "#10b981"]} className="flex-1">
+    <SafeAreaView className="flex-1 bg-transparent" edges={['bottom', 'left', 'right']}>
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="flex-1">
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -200,7 +183,7 @@ function BoarderLoginScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View className="flex-1 p-6">
-              <TouchableOpacity className="mt-5" onPress={() => router.back()}>
+              <TouchableOpacity className="mt-5" onPress={() => router.back()} disabled={loading}>
                 <Text className="text-white text-base">← Back</Text>
               </TouchableOpacity>
 
@@ -213,7 +196,7 @@ function BoarderLoginScreen() {
                       : "Complete Profile"
                     : "Boarder Login"}
                 </Text>
-                <Text className="text-base text-slate-200 text-center mt-2">
+                <Text className="text-base text-white/80 text-center mt-2">
                   {isSignup
                     ? step === 1
                       ? "Join our boarding house"
@@ -229,29 +212,32 @@ function BoarderLoginScreen() {
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
                       <Mail size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Email address"
                         placeholderTextColor="#9ca3af"
                         value={email}
                         onChangeText={setEmail}
                         keyboardType="email-address"
                         autoCapitalize="none"
+                        editable={!loading}
                       />
                     </View>
 
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-6">
                       <Lock size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Password"
                         placeholderTextColor="#9ca3af"
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry={!showPassword}
+                        editable={!loading}
                       />
                       <TouchableOpacity
                         className="p-1"
                         onPress={() => setShowPassword(!showPassword)}
+                        disabled={loading}
                       >
                         {showPassword ? (
                           <EyeOff size={20} color="#6b7280" />
@@ -262,16 +248,16 @@ function BoarderLoginScreen() {
                     </View>
 
                     <TouchableOpacity
-                      className={`bg-orange-600 rounded-xl py-4 items-center ${
+                      className={`bg-white rounded-xl py-4 items-center ${
                         loading ? "opacity-60" : ""
                       }`}
                       onPress={handleLogin}
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#ffffff" />
+                        <ActivityIndicator color="#3B82F6" />
                       ) : (
-                        <Text className="text-white text-base font-semibold">
+                        <Text className="text-primary text-base font-semibold">
                           Sign In
                         </Text>
                       )}
@@ -280,6 +266,7 @@ function BoarderLoginScreen() {
                     <TouchableOpacity
                       className="mt-4 py-3 items-center"
                       onPress={() => setIsSignup(true)}
+                      disabled={loading}
                     >
                       <Text className="text-white text-base">
                         Don&apos;t have an account? Sign Up
@@ -288,10 +275,11 @@ function BoarderLoginScreen() {
 
                     {/* Change Password button */}
                       <TouchableOpacity
-                        className="bg-gray-200 rounded-xl py-4 items-center mt-3"
+                        className="bg-white/20 rounded-xl py-4 items-center mt-3"
                         onPress={() => router.replace("/auth/updateBoarder")}
+                        disabled={loading}
                         >
-                          <Text className="text-gray-800 text-base font-semibold">
+                          <Text className="text-white text-base font-semibold">
                             Forgot Password?
                           </Text>
                       </TouchableOpacity>
@@ -304,40 +292,44 @@ function BoarderLoginScreen() {
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
                       <User size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Full Name"
                         placeholderTextColor="#9ca3af"
                         value={name}
                         onChangeText={setName}
+                        editable={!loading}
                       />
                     </View>
 
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
                       <Mail size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Email address"
                         placeholderTextColor="#9ca3af"
                         value={email}
                         onChangeText={setEmail}
                         keyboardType="email-address"
                         autoCapitalize="none"
+                        editable={!loading}
                       />
                     </View>
 
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-6">
                       <Lock size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Password (min 8 characters)"
                         placeholderTextColor="#9ca3af"
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry={!showPassword}
+                        editable={!loading}
                       />
                       <TouchableOpacity
                         className="p-1"
                         onPress={() => setShowPassword(!showPassword)}
+                        disabled={loading}
                       >
                         {showPassword ? (
                           <EyeOff size={20} color="#6b7280" />
@@ -348,16 +340,16 @@ function BoarderLoginScreen() {
                     </View>
 
                     <TouchableOpacity
-                      className={`bg-orange-600 rounded-xl py-4 items-center ${
+                      className={`bg-white rounded-xl py-4 items-center ${
                         loading ? "opacity-60" : ""
                       }`}
                       onPress={handleSignupStep1}
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#ffffff" />
+                        <ActivityIndicator color="#3B82F6" />
                       ) : (
-                        <Text className="text-white text-base font-semibold">
+                        <Text className="text-primary text-base font-semibold">
                           Continue
                         </Text>
                       )}
@@ -366,6 +358,7 @@ function BoarderLoginScreen() {
                     <TouchableOpacity
                       className="mt-4 py-3 items-center"
                       onPress={() => setIsSignup(false)}
+                      disabled={loading}
                     >
                       <Text className="text-white text-base">
                         Already have an account? Sign In
@@ -380,27 +373,29 @@ function BoarderLoginScreen() {
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
                       <Phone size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Phone Number"
                         placeholderTextColor="#9ca3af"
                         value={phoneNum}
                         onChangeText={setPhoneNum}
                         keyboardType="phone-pad"
+                        editable={!loading}
                       />
                     </View>
 
                     <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
                       <Home size={20} color="#6b7280" className="mr-3" />
                       <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
+                        className="flex-1 text-base text-dark-100 py-4"
                         placeholder="Room Number"
                         placeholderTextColor="#9ca3af"
                         value={roomNum}
                         onChangeText={setRoomNum}
+                        editable={!loading}
                       />
                     </View>
 
-                    <View className="bg-white rounded-xl px-4 py-4 mb-4">
+                    <View className="bg-white rounded-xl px-4 py-4 mb-6">
                       <Text className="text-sm font-medium text-gray-700 mb-3">
                         Meal Preference
                       </Text>
@@ -411,16 +406,17 @@ function BoarderLoginScreen() {
                               key={pref}
                               className={`px-4 py-2 rounded-lg border ${
                                 mealPreference === pref
-                                  ? "bg-emerald-600 border-emerald-600"
+                                  ? "bg-primary border-primary"
                                   : "border-gray-300"
                               }`}
                               onPress={() => setMealPreference(pref)}
+                              disabled={loading}
                             >
                               <Text
                                 className={`text-sm font-medium ${
                                   mealPreference === pref
                                     ? "text-white"
-                                    : "text-gray-600"
+                                    : "text-gray-100"
                                 }`}
                               >
                                 {pref.charAt(0).toUpperCase() + pref.slice(1)}
@@ -431,41 +427,17 @@ function BoarderLoginScreen() {
                       </View>
                     </View>
 
-                    <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-4">
-                      <IndianRupee size={20} color="#6b7280" className="mr-3" />
-                      <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
-                        placeholder="Advance Payment"
-                        placeholderTextColor="#9ca3af"
-                        value={advance}
-                        onChangeText={setAdvance}
-                        keyboardType="numeric"
-                      />
-                    </View>
-
-                    <View className="flex-row items-center bg-white rounded-xl px-4 py-1 mb-6">
-                      <IndianRupee size={20} color="#6b7280" className="mr-3" />
-                      <TextInput
-                        className="flex-1 text-base text-gray-800 py-4"
-                        placeholder="Current Balance (default: 0)"
-                        placeholderTextColor="#9ca3af"
-                        value={current}
-                        onChangeText={setCurrent}
-                        keyboardType="numeric"
-                      />
-                    </View>
-
                     <TouchableOpacity
-                      className={`bg-orange-600 rounded-xl py-4 items-center ${
+                      className={`bg-white rounded-xl py-4 items-center ${
                         loading ? "opacity-60" : ""
                       }`}
                       onPress={handleSignupStep2}
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#ffffff" />
+                        <ActivityIndicator color="#3B82F6" />
                       ) : (
-                        <Text className="text-white text-base font-semibold">
+                        <Text className="text-primary text-base font-semibold">
                           Complete Signup
                         </Text>
                       )}
@@ -474,6 +446,7 @@ function BoarderLoginScreen() {
                     <TouchableOpacity
                       className="mt-4 py-3 items-center"
                       onPress={() => setStep(1)}
+                      disabled={loading}
                     >
                       <Text className="text-white text-base">← Back</Text>
                     </TouchableOpacity>

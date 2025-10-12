@@ -1,29 +1,37 @@
 // app/(boarder)/(tabs)/meals.tsx
 
 import {
-  getBoarderProfile,
-  getOrCreateMealRecord,
-  toggleMealStatus,
-  updateBoarderMealPreference,
+    getBoarderProfile,
+    getOrCreateMealRecord,
+    toggleMealStatus,
+    updateBoarderMealPreference,
 } from "@/lib/actions";
+import { canTurnOffMeal, formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Calendar, Clock, Coffee, Moon, Sun, User } from "lucide-react-native";
+import { Calendar, Clock, Coffee, Lock, LogOut, Moon, Sun, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 function BoarderMealTracker() {
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  // Use local date instead of UTC
+  const getLocalDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  
+  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
   const [activeTab, setActiveTab] = useState<"meals" | "preferences">("meals");
   const [loading, setLoading] = useState(false);
   const [mealRecord, setMealRecord] = useState<any>(null);
@@ -31,8 +39,18 @@ function BoarderMealTracker() {
   const [mealPreference, setMealPreference] = useState<
     "veg" | "non-veg" | "egg" | "fish"
   >("veg");
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const { user } = useAuthStore();
+
+  // Update time every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
 
   useEffect(() => {
@@ -109,11 +127,21 @@ function BoarderMealTracker() {
       // Determine new status
       const newStatus = mealRecordForDate.status === "ON" ? "OFF" : "ON";
 
+      // Time-confined logic: Check if trying to turn OFF a meal past the deadline
+      if (newStatus === "OFF") {
+        const timeCheck = canTurnOffMeal(mealType, date);
+        if (!timeCheck.allowed) {
+          Alert.alert("Deadline Passed", timeCheck.message || "Cannot modify this meal.");
+          setLoading(false);
+          return;
+        }
+      }
+
       // Toggle status in backend
       const result = await toggleMealStatus(user.id, date, mealType, newStatus);
 
       if (result.success) {
-        // Reload today’s meals only if the toggled date is today
+        // Reload today's meals only if the toggled date is today
         if (date === selectedDate) await loadMealRecord();
       } else {
         Alert.alert("Error", result.error || "Failed to update meal status");
@@ -170,98 +198,154 @@ function BoarderMealTracker() {
     },
   ];
 
-  const renderMealsTab = () => (
+  const renderMealsTab = () => {
+    // Format local time
+    const formatTime = (date: Date) => {
+      const hours = date.getHours();
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      const displayHours = hours % 12 || 12;
+      return `${displayHours}:${minutes}:${seconds} ${ampm}`;
+    };
+
+    return (
     <>
-      {/* Date Selector */}
-      <View className="flex-row items-center bg-white rounded-xl p-4 mb-5 gap-3 shadow-sm">
-        <Calendar size={20} color="#059669" />
-        <Text className="text-base font-medium text-gray-800">
-          {selectedDate}
-        </Text>
+      {/* Date and Time Display */}
+      <View className="bg-white rounded-xl p-3 sm:p-4 mb-4 sm:mb-5 shadow-sm">
+        <View className="flex-row items-center gap-2 sm:gap-3 mb-2">
+          <Calendar size={18} color="#3B82F6" />
+          <Text className="text-sm sm:text-base md:text-lg font-medium text-dark-100">
+            {formatDateForDisplay(selectedDate)}
+          </Text>
+        </View>
+        <View className="flex-row items-center gap-2 sm:gap-3">
+          <Clock size={18} color="#3B82F6" />
+          <Text className="text-sm sm:text-base md:text-lg font-semibold text-primary">
+            {formatTime(currentTime)}
+          </Text>
+        </View>
       </View>
 
       {/* Meal Options */}
-      <View className="bg-white rounded-2xl p-5 mb-5 shadow-lg">
-        <Text className="text-lg font-semibold text-gray-800 mb-4">
+      <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 mb-4 sm:mb-5 shadow-lg">
+        <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
           Today&apos;s Meals
         </Text>
 
         {mealRecord ? (
           mealOptions.map((meal) => {
             const IconComponent = meal.icon;
+            const isLocked = meal.active && !canTurnOffMeal(meal.id as "brunch" | "dinner", selectedDate).allowed;
             return (
-              <TouchableOpacity
+                <TouchableOpacity
                 key={meal.id}
-                className={`flex-row items-center justify-between py-4 px-3 rounded-xl mb-3 border-2 ${
+                className={`flex-row items-center justify-between py-3 px-2.5 sm:py-4 sm:px-3 rounded-xl mb-2.5 sm:mb-3 border-2 ${
                   meal.active
-                    ? "bg-emerald-50 border-emerald-600"
+                    ? isLocked
+                      ? "bg-gray-50 border-gray-300"
+                      : "bg-blue-50 border-primary"
                     : "border-gray-100"
                 }`}
                 onPress={() => handleMealToggle(meal.id as "brunch" | "dinner")}
-                disabled={loading}
+                disabled={loading || isLocked}
               >
                 <View className="flex-row items-center flex-1">
                   <View
-                    className={`w-12 h-12 rounded-full items-center justify-center mr-3 ${
-                      meal.active ? "bg-emerald-600" : "bg-emerald-50"
+                    className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full items-center justify-center mr-2.5 sm:mr-3 ${
+                      meal.active 
+                        ? isLocked 
+                          ? "bg-gray-400" 
+                          : "bg-primary" 
+                        : "bg-blue-50"
                     }`}
                   >
                     <IconComponent
-                      size={24}
-                      color={meal.active ? "#ffffff" : "#059669"}
+                      size={20}
+                      color={meal.active ? "#ffffff" : "#3B82F6"}
                     />
                   </View>
                   <View className="flex-1">
-                    <Text
-                      className={`text-base font-medium mb-1 ${
-                        meal.active ? "text-emerald-600" : "text-gray-800"
-                      }`}
-                    >
-                      {meal.name}
-                    </Text>
-                    <View className="flex-row items-center gap-1">
-                      <Clock size={14} color="#6b7280" />
-                      <Text className="text-sm text-gray-600">{meal.time}</Text>
+                    <View className="flex-row items-center gap-1.5">
+                      <Text
+                        className={`text-sm sm:text-base md:text-lg font-medium ${
+                          meal.active 
+                            ? isLocked 
+                              ? "text-gray-500" 
+                              : "text-primary" 
+                            : "text-dark-100"
+                        }`}
+                      >
+                        {meal.name}
+                      </Text>
+                      {isLocked && (
+                        <Lock size={14} color="#dc2626" />
+                      )}
+                    </View>
+                    <View className="flex-row items-center gap-0.5 sm:gap-1">
+                      <Clock size={12} color="#6b7280" />
+                      <Text className="text-xs sm:text-sm text-gray-600">
+                        {meal.time}
+                        {isLocked && (
+                          <Text className="text-red-600"> • Locked</Text>
+                        )}
+                      </Text>
                     </View>
                   </View>
                 </View>
                 <View
-                  className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg ${
                     meal.active
-                      ? "bg-emerald-600 border-emerald-600"
-                      : "border-gray-300"
+                      ? isLocked
+                        ? "bg-gray-400"
+                        : "bg-primary"
+                      : "bg-gray-300"
                   }`}
                 >
-                  {meal.active && (
-                    <Text className="text-white text-sm font-bold">✓</Text>
-                  )}
+                  <Text className="text-white text-xs sm:text-sm font-bold">
+                    {meal.active ? "ON" : "OFF"}
+                  </Text>
                 </View>
               </TouchableOpacity>
             );
           })
         ) : (
-          <View className="items-center py-6">
-            <ActivityIndicator size="small" color="#059669" />
-            <Text className="text-sm text-gray-600 mt-2">Loading meals...</Text>
+          <View className="items-center py-5 sm:py-6">
+            <ActivityIndicator size="small" color="#3B82F6" />
+            <Text className="text-xs sm:text-sm text-gray-100 mt-2">Loading meals...</Text>
           </View>
         )}
       </View>
 
       {/* Quick Actions */}
-      <View className="bg-white rounded-2xl p-5 shadow-lg">
-        <Text className="text-lg font-semibold text-gray-800 mb-4">
+      <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
+        <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
           Quick Actions
         </Text>
 
         {/* Toggle Tonight's Dinner */}
         <TouchableOpacity
-          className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 mb-3 gap-3"
+          className={`flex-row items-center py-3 px-3 sm:py-4 sm:px-4 rounded-xl mb-2.5 sm:mb-3 gap-2 sm:gap-3 ${
+            todayMeals.dinner && !canTurnOffMeal("dinner", selectedDate).allowed
+              ? "bg-gray-100"
+              : "bg-blue-50"
+          }`}
           onPress={() => handleMealToggle("dinner")}
-          disabled={loading || !mealRecord}
+          disabled={loading || !mealRecord || (todayMeals.dinner && !canTurnOffMeal("dinner", selectedDate).allowed)}
         >
-          <Moon size={20} color="#ea580c" />
-          <Text className="text-base font-medium text-orange-600">
-            {todayMeals.dinner
+          {todayMeals.dinner && !canTurnOffMeal("dinner", selectedDate).allowed ? (
+            <Lock size={18} color="#6b7280" />
+          ) : (
+            <Moon size={18} color="#3B82F6" />
+          )}
+          <Text className={`text-sm sm:text-base md:text-lg font-medium ${
+            todayMeals.dinner && !canTurnOffMeal("dinner", selectedDate).allowed
+              ? "text-gray-500"
+              : "text-primary"
+          }`}>
+            {todayMeals.dinner && !canTurnOffMeal("dinner", selectedDate).allowed
+              ? "Dinner Locked (After 5:00 PM)"
+              : todayMeals.dinner
               ? "Skip Tonight's Dinner"
               : "Turn On Tonight's Dinner"}
           </Text>
@@ -269,13 +353,17 @@ function BoarderMealTracker() {
 
         {/* Toggle Tomorrow's Brunch */}
         <TouchableOpacity
-          className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 mb-3 gap-3"
+          className="flex-row items-center py-3 px-3 sm:py-4 sm:px-4 rounded-xl bg-blue-50 mb-2.5 sm:mb-3 gap-2 sm:gap-3"
           onPress={async () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            const tomorrowStr = tomorrow.toISOString().split("T")[0];
+            // Use local date instead of UTC
+            const year = tomorrow.getFullYear();
+            const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+            const day = String(tomorrow.getDate()).padStart(2, "0");
+            const tomorrowStr = `${year}-${month}-${day}`;
 
-            // Fetch tomorrow’s brunch record to check its status
+            // Fetch tomorrow's brunch record to check its status
             const brunchRecord = await getOrCreateMealRecord(
               user!.id,
               tomorrowStr,
@@ -295,43 +383,55 @@ function BoarderMealTracker() {
           }}
           disabled={loading || !mealRecord}
         >
-          <Coffee size={20} color="#ea580c" />
-          <Text className="text-base font-medium text-orange-600">
-            {/** This label changes based on tomorrow’s brunch status dynamically after toggle */}
+          <Coffee size={18} color="#3B82F6" />
+          <Text className="text-sm sm:text-base md:text-lg font-medium text-primary">
+            {/** This label changes based on tomorrow's brunch status dynamically after toggle */}
             Skip / Turn On Tomorrow&apos;s Brunch
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          className="flex-row items-center py-4 px-4 rounded-xl bg-orange-50 gap-3"
+          className="flex-row items-center py-3 px-3 sm:py-4 sm:px-4 rounded-xl bg-blue-50 gap-2 sm:gap-3"
           onPress={() => router.push("/(boarder)/skip-range")}
         >
-          <Calendar size={20} color="#ea580c" />
-          <Text className="text-base font-medium text-orange-600">
+          <Calendar size={18} color="#3B82F6" />
+          <Text className="text-sm sm:text-base md:text-lg font-medium text-primary">
             Skip Date Range
           </Text>
         </TouchableOpacity>
+
+        {/* Time Restrictions Info */}
+        <View className="bg-blue-50 rounded-xl p-3 sm:p-4 mt-2">
+          <Text className="text-xs sm:text-sm text-blue-800 font-medium mb-1">
+            ⏰ Meal Toggle Deadlines
+          </Text>
+          <Text className="text-xs sm:text-sm text-blue-700">
+            • Brunch can be turned off until 5:00 AM same day{"\n"}
+            • Dinner can be turned off until 5:00 PM same day
+          </Text>
+        </View>
       </View>
     </>
-  );
+    );
+  };
 
   const renderPreferencesTab = () => (
-    <View className="bg-white rounded-2xl p-5 shadow-lg">
-      <Text className="text-lg font-semibold text-gray-800 mb-4">
+    <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
+      <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
         Meal Preference
       </Text>
-      <Text className="text-sm text-gray-600 mb-6">
+      <Text className="text-xs sm:text-sm md:text-base text-gray-100 mb-4 sm:mb-5 md:mb-6">
         Select your preferred meal type. This helps the kitchen prepare the
         right food for you.
       </Text>
 
-      <View className="gap-3">
+      <View className="gap-2.5 sm:gap-3">
         {(["veg", "non-veg", "egg", "fish"] as const).map((pref) => (
           <TouchableOpacity
             key={pref}
-            className={`flex-row items-center justify-between py-4 px-4 rounded-xl border-2 ${
+            className={`flex-row items-center justify-between py-3 px-3 sm:py-4 sm:px-4 rounded-xl border-2 ${
               mealPreference === pref
-                ? "bg-emerald-50 border-emerald-600"
+                ? "bg-blue-50 border-primary"
                 : "border-gray-200"
             }`}
             onPress={() => handleUpdateMealPreference(pref)}
@@ -339,27 +439,27 @@ function BoarderMealTracker() {
           >
             <View className="flex-row items-center">
               <View
-                className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${
-                  mealPreference === pref ? "bg-emerald-600" : "bg-gray-100"
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full items-center justify-center mr-2.5 sm:mr-3 ${
+                  mealPreference === pref ? "bg-primary" : "bg-gray-100"
                 }`}
               >
                 <User
-                  size={20}
+                  size={18}
                   color={mealPreference === pref ? "#ffffff" : "#6b7280"}
                 />
               </View>
               <Text
-                className={`text-base font-medium ${
-                  mealPreference === pref ? "text-emerald-600" : "text-gray-800"
+                className={`text-sm sm:text-base md:text-lg font-medium ${
+                  mealPreference === pref ? "text-primary" : "text-dark-100"
                 }`}
               >
                 {pref.charAt(0).toUpperCase() + pref.slice(1).replace("-", " ")}
               </Text>
             </View>
             <View
-              className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
+              className={`w-4.5 h-4.5 sm:w-5 sm:h-5 rounded-full border-2 items-center justify-center ${
                 mealPreference === pref
-                  ? "bg-emerald-600 border-emerald-600"
+                  ? "bg-primary border-primary"
                   : "border-gray-300"
               }`}
             >
@@ -372,11 +472,11 @@ function BoarderMealTracker() {
       </View>
 
       {boarderProfile && (
-        <View className="mt-6 p-4 bg-gray-50 rounded-xl">
-          <Text className="text-sm font-medium text-gray-700 mb-2">
+        <View className="mt-4 sm:mt-5 md:mt-6 p-3 sm:p-4 bg-gray-50 rounded-xl">
+          <Text className="text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
             Current Preference
           </Text>
-          <Text className="text-base text-emerald-600 font-semibold">
+          <Text className="text-sm sm:text-base md:text-lg text-primary font-semibold">
             {mealPreference.charAt(0).toUpperCase() +
               mealPreference.slice(1).replace("-", " ")}
           </Text>
@@ -384,50 +484,67 @@ function BoarderMealTracker() {
       )}
 
       {!boarderProfile && (
-        <View className="items-center py-6">
-          <ActivityIndicator size="small" color="#059669" />
-          <Text className="text-sm text-gray-600 mt-2">Loading profile...</Text>
+        <View className="items-center py-5 sm:py-6">
+          <ActivityIndicator size="small" color="#3B82F6" />
+          <Text className="text-xs sm:text-sm text-gray-100 mt-2">Loading profile...</Text>
         </View>
       )}
     </View>
   );
 
+  const logout = useAuthStore((state) => state.logout);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
+
   return (
-    <ScrollView className="flex-1 bg-slate-50">
-      <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
-        <Text className="text-2xl font-bold justify-center items-center text-white">
-          Welcome <Text className="text-emerald-200">{boarderProfile?.name}</Text>
-        </Text>
-        <Text className="text-2xl font-bold text-white">Food Dashboard</Text>
-        <Text className="text-base text-slate-200 mt-1">
-          Manage your meals and preferences
-        </Text>
+    <ScrollView className="flex-1 bg-white-100">
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+        <View className="flex-row justify-between items-start mb-3 sm:mb-4">
+          <View className="flex-1">
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold justify-center items-center text-white">
+              Welcome <Text className="text-blue-200">{boarderProfile?.name}</Text>
+            </Text>
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Food Dashboard</Text>
+            <Text className="text-sm sm:text-base md:text-lg text-white/80 mt-0.5 sm:mt-1">
+              Manage your meals and preferences
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+          >
+            <LogOut size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
 
         {/* Tab Navigation */}
-        <View className="flex-row mt-6 bg-white/20 rounded-xl p-1">
+        <View className="flex-row mt-4 sm:mt-5 md:mt-6 bg-white/20 rounded-xl p-0.5 sm:p-1">
           <TouchableOpacity
-            className={`flex-1 py-3 px-4 rounded-lg items-center ${
+            className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-4 rounded-lg items-center ${
               activeTab === "meals" ? "bg-white" : ""
             }`}
             onPress={() => setActiveTab("meals")}
           >
             <Text
-              className={`text-sm font-medium ${
-                activeTab === "meals" ? "text-emerald-600" : "text-white"
+              className={`text-xs sm:text-sm md:text-base font-medium ${
+                activeTab === "meals" ? "text-primary" : "text-white"
               }`}
             >
               Daily Meals
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`flex-1 py-3 px-4 rounded-lg items-center ${
+            className={`flex-1 py-2.5 px-3 sm:py-3 sm:px-4 rounded-lg items-center ${
               activeTab === "preferences" ? "bg-white" : ""
             }`}
             onPress={() => setActiveTab("preferences")}
           >
             <Text
-              className={`text-sm font-medium ${
-                activeTab === "preferences" ? "text-emerald-600" : "text-white"
+              className={`text-xs sm:text-sm md:text-base font-medium ${
+                activeTab === "preferences" ? "text-primary" : "text-white"
               }`}
             >
               Preferences
@@ -436,11 +553,11 @@ function BoarderMealTracker() {
         </View>
       </LinearGradient>
 
-      <View className="p-4">
+      <View className="px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5">
         {loading && (
-          <View className="bg-white rounded-xl p-4 mb-4 items-center">
-            <ActivityIndicator size="small" color="#059669" />
-            <Text className="text-sm text-gray-600 mt-2">Updating...</Text>
+          <View className="bg-white rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 items-center">
+            <ActivityIndicator size="small" color="#3B82F6" />
+            <Text className="text-xs sm:text-sm text-gray-100 mt-2">Updating...</Text>
           </View>
         )}
 

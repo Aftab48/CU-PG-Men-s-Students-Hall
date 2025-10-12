@@ -3,13 +3,15 @@
 import { countCurrentMonthMealsForBoarder, getBoarderProfile, persistMealsCountIfSupported } from "@/lib/actions";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import {
-  Calendar,
-  TrendingUp,
-  Wallet
+    Calendar,
+    LogOut,
+    TrendingUp,
+    Wallet
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 // Reusable Row Component
 export const Row = ({
@@ -21,10 +23,10 @@ export const Row = ({
   value: string | number;
   isNegative?: boolean;
 }) => (
-  <View className="flex-row justify-between items-center py-3 border-b border-gray-100">
-    <Text className="text-sm text-gray-600">{label}</Text>
+  <View className="flex-row justify-between items-center py-2.5 sm:py-3 md:py-4 border-b border-gray-100">
+    <Text className="text-xs sm:text-sm md:text-base text-gray-100">{label}</Text>
     <Text
-      className={`text-sm font-medium ${isNegative ? "text-red-600" : "text-gray-800"}`}
+      className={`text-xs sm:text-sm md:text-base font-medium ${isNegative ? "text-red-600" : "text-dark-100"}`}
     >
       {value}
     </Text>
@@ -43,17 +45,22 @@ const SummaryCard = ({
   value: string | number;
   color: string;
 }) => (
-  <View className="flex-1 bg-white rounded-xl p-4 items-center shadow-sm">
+  <View className="flex-1 bg-white rounded-xl p-3 sm:p-4 md:p-5 items-center shadow-sm">
     <Icon size={24} color={color} />
-    <Text className="text-xs text-gray-600 text-center mt-2 mb-1">{label}</Text>
-    <Text className="text-lg font-bold text-gray-800">{value}</Text>
+    <Text className="text-xs sm:text-sm text-gray-100 text-center mt-1.5 sm:mt-2 mb-0.5 sm:mb-1">{label}</Text>
+    <Text className="text-base sm:text-lg md:text-xl font-bold text-dark-100">{value}</Text>
   </View>
 );
 
 function BalanceScreen() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [boarderProfile, setBoarderProfile] = useState<any>(null);
   const [monthlyMealsCount, setMonthlyMealsCount] = useState<number>(0);
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
 
   useEffect(() => {
       if (user) {
@@ -101,9 +108,9 @@ function BalanceScreen() {
 
   if (!boarderProfile) {
     return (
-      <ScrollView className="flex-1 bg-slate-50">
-        <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
-          <Text className="text-2xl font-bold text-white">
+      <ScrollView className="flex-1 bg-white-100">
+        <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+          <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
             Loading balance...
           </Text>
         </LinearGradient>
@@ -113,50 +120,60 @@ function BalanceScreen() {
 
 
   return (
-    <ScrollView className="flex-1 bg-slate-50">
-      <LinearGradient colors={["#059669", "#10b981"]} className="p-6 pt-15">
-        <Text className="text-2xl font-bold justify-center items-center text-white">
-          Welcome <Text className="text-emerald-200">{boarderProfile?.name}</Text>
-        </Text>
-        <Text className="text-2xl font-bold text-white">Monthly Overview</Text>
-        <Text className="text-base text-slate-200 mt-1">
-          View your advance payment and meals consumed
-        </Text>
+    <ScrollView className="flex-1 bg-white-100">
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+        <View className="flex-row justify-between items-start mb-3 sm:mb-4">
+          <View className="flex-1">
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold justify-center items-center text-white">
+              Welcome <Text className="text-blue-200">{boarderProfile?.name}</Text>
+            </Text>
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Monthly Overview</Text>
+            <Text className="text-sm sm:text-base md:text-lg text-white/80 mt-0.5 sm:mt-1">
+              View your advance payment and meals consumed
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+          >
+            <LogOut size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
-      <View className="p-4">
+      <View className="px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5">
         {/* Advance Payment Card */}
-        <View className="bg-white rounded-3xl p-6 mb-5 items-center shadow-xl">
-          <View className="items-center mb-3">
-            <Wallet size={32} color="#059669" />
-            <Text className="text-base text-gray-600 mt-2">
+        <View className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 mb-4 sm:mb-5 items-center shadow-xl">
+          <View className="items-center mb-2 sm:mb-3">
+            <Wallet size={28} color="#3B82F6" />
+            <Text className="text-sm sm:text-base md:text-lg text-gray-100 mt-1.5 sm:mt-2">
               Monthly Advance Payment
             </Text>
           </View>
-          <Text className="text-4xl font-bold mb-3 text-emerald-600">
+          <Text className="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 sm:mb-3 text-primary">
             ₹{balanceData.advancePayment.toLocaleString()}
           </Text>
-          <View className="flex-row items-center gap-2">
-            <TrendingUp size={20} color="#059669" />
-            <Text className="text-sm font-medium text-emerald-600">
+          <View className="flex-row items-center gap-1.5 sm:gap-2">
+            <TrendingUp size={18} color="#3B82F6" />
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-primary">
               Paid in advance
             </Text>
           </View>
         </View>
 
         {/* Summary Cards */}
-        <View className="flex-row gap-3 mb-5">
+        <View className="flex-row gap-2.5 sm:gap-3 md:gap-4 mb-4 sm:mb-5">
           <SummaryCard
             icon={Calendar}
             label="Meals Consumed"
             value={balanceData.totalMealsConsumed}
-            color="#ea580c"
+            color="#3B82F6"
           />
         </View>
 
         {/* Status Message */}
-        <View className="rounded-xl p-4 bg-emerald-50 border border-emerald-200">
-          <Text className="text-sm text-center leading-5 text-emerald-600">
+        <View className="rounded-xl p-3 sm:p-4 md:p-5 bg-blue-50 border border-blue-200">
+          <Text className="text-xs sm:text-sm md:text-base text-center leading-4 sm:leading-5 md:leading-6 text-primary">
             This month you have consumed {balanceData.totalMealsConsumed} meals with an advance payment of ₹{balanceData.advancePayment.toLocaleString()}.
           </Text>
         </View>

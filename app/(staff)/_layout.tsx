@@ -1,12 +1,12 @@
-import React from 'react'
-import { Text, View } from 'react-native'
+// app/(staff)/_layout.tsx
 
-const _layout = () => {
+import { Stack } from "expo-router";
+import React from "react";
+
+export default function StaffLayout() {
   return (
-    <View>
-      <Text>_layout</Text>
-    </View>
-  )
+    <Stack screenOptions={{ headerShown: false}}>
+      <Stack.Screen name="(tabs)" />
+    </Stack>
+  );
 }
-
-export default _layout

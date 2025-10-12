@@ -1,6 +1,7 @@
 // lib/actions/boarder.actions.ts
 
-import { account, appwriteConfig, avatars, ID, Query, tables } from "../appwrite";
+import { File } from "expo-file-system";
+import { account, appwriteConfig, avatars, ID, Query, storage, tables } from "../appwrite";
 import { seedMealsForBoarder } from "../seedMeals";
 import { setMealStatusForDateRange } from "./meal.actions";
 
@@ -359,3 +360,114 @@ export async function skipMealsForDateRange(
 //     };
 //   }
 // }
+
+/**
+ * Upload payment screenshot to Appwrite Storage
+ */
+async function uploadPaymentScreenshot(localUri: string): Promise<string | null> {
+  try {
+    // Extract file name from URI
+    const fileName = localUri.split("/").pop() || `payment_${Date.now()}.jpg`;
+    
+    // Get file info using the new File API
+    const fileHandle = new File(localUri);
+    if (!fileHandle.exists) {
+      throw new Error("File does not exist");
+    }
+
+    const fileInfo = await fileHandle.info();
+
+    // Determine file type based on extension
+    const fileExtension = fileName.split(".").pop()?.toLowerCase() || "jpg";
+    const mimeTypes: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+    };
+    const mimeType = mimeTypes[fileExtension] || "image/jpeg";
+    
+    // Create file object for upload
+    const file = {
+      name: fileName,
+      type: mimeType,
+      size: fileInfo.size || 0,
+      uri: localUri,
+    };
+
+    // Upload to Appwrite Storage
+    const uploadedFile = await storage.createFile({
+      bucketId: appwriteConfig.bucketId,
+      fileId: ID.unique(),
+      file
+    });
+
+    // Construct the file view URL manually
+    const fileUrl = `${appwriteConfig.endpoint}/storage/buckets/${appwriteConfig.bucketId}/files/${uploadedFile.$id}/view?project=${appwriteConfig.projectId}`;
+    
+    return fileUrl;
+  } catch (error: any) {
+    console.error("Upload payment screenshot error:", error);
+    throw new Error(error.message || "Failed to upload payment screenshot");
+  }
+}
+
+/**
+ * Submit payment: upload screenshot, update boarder's advance, log as funding
+ */
+export async function submitPayment(
+  userId: string,
+  profileId: string,
+  amount: number,
+  screenshotUri: string
+) {
+  try {
+    // Upload payment screenshot
+    const paymentUrl = await uploadPaymentScreenshot(screenshotUri);
+    if (!paymentUrl) {
+      throw new Error("Failed to upload payment screenshot");
+    }
+
+    // Create payment record in PAYMENTS table
+    await tables.createRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.paymentsTableId,
+      rowId: ID.unique(),
+      data: {
+        amount,
+        boarderId: profileId,
+        paymentURL: paymentUrl,
+      },
+    });
+
+    // Update boarder's advance balance
+    const currentProfile = await tables.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+    });
+
+    const currentAdvance = currentProfile?.advance ?? 0;
+    const newAdvance = currentAdvance + amount;
+
+    await tables.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+      data: { advance: newAdvance },
+    });
+
+    return {
+      success: true,
+      newAdvance,
+      paymentUrl,
+    };
+  } catch (error: any) {
+    console.error("Submit payment error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to submit payment",
+    };
+  }
+}

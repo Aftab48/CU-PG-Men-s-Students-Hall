@@ -1,6 +1,7 @@
 // lib/seedMeals.ts
 
 import { appwriteConfig, ID, tables } from "./appwrite";
+import { toLocalISOString } from "./utils";
 
 // Dummy staff ID for testing
 //const DUMMY_STAFF_ID = "68dummy1234567890";
@@ -31,7 +32,14 @@ export async function seedMeals() {
       for (let i = 0; i < daysRemaining; i++) {
         const date = new Date(today);
         date.setDate(today.getDate() + i);
-        const isoDate = date.toISOString();
+        // Use local date and time to avoid timezone issues
+        const dateAtNoon = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          12, 0, 0 // Set to noon local time to avoid any date boundary issues
+        );
+        const isoDate = toLocalISOString(dateAtNoon);
 
         for (const mealType of mealTypes) {
           await tables.createRow({
@@ -58,7 +66,7 @@ export async function seedMeals() {
 }
 
 /**
- * Seed meals for a single boarder (by userId) from today through end of month.
+ * Seed meals for a single boarder (by userId) from tomorrow through end of month.
  */
 export async function seedMealsForBoarder(boarderUserId: string) {
   try {
@@ -67,16 +75,23 @@ export async function seedMealsForBoarder(boarderUserId: string) {
     const mealTypes = ["brunch", "dinner"];
     const today = new Date();
 
-    // Calculate remaining days in the current month (including today)
+    // Calculate remaining days in the current month (excluding today)
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const daysRemaining = lastDayOfMonth - today.getDate() + 1;
+    const daysRemaining = lastDayOfMonth - today.getDate();
 
-    for (let i = 0; i < daysRemaining; i++) {
+    for (let i = 1; i <= daysRemaining; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      const isoDate = date.toISOString();
+      // Use local date and time to avoid timezone issues
+      const dateAtNoon = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        12, 0, 0 // Set to noon local time to avoid any date boundary issues
+      );
+      const isoDate = toLocalISOString(dateAtNoon);
 
       for (const mealType of mealTypes) {
         await tables.createRow({
@@ -94,7 +109,7 @@ export async function seedMealsForBoarder(boarderUserId: string) {
     }
 
     console.log(
-      `✅ Meals seeded for boarder ${boarderUserId} through end of month (${daysRemaining} days).`
+      `✅ Meals seeded for boarder ${boarderUserId} from tomorrow through end of month (${daysRemaining} days).`
     );
   } catch (err) {
     console.error("❌ Error seeding meals for boarder:", err);

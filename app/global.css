@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --primary-blue: #3B82F6;
+    --navy: #1E3A8A;
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --bg-main: #F9FAFB;
+    --bg-card: #FFFFFF;
+}
+
 @layer utilities {
     .flex-center {
         @apply flex items-center justify-center;

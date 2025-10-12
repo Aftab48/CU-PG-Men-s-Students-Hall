@@ -1,7 +1,7 @@
 //lib/appwrite
 
 import Constants from "expo-constants";
-import { Account, Avatars, Client, Databases, ID, Query, TablesDB } from "react-native-appwrite";
+import { Account, Avatars, Client, Databases, ID, Query, Storage, TablesDB } from "react-native-appwrite";
 
 interface AppwriteEnv {
   EXPO_PUBLIC_APPWRITE_ENDPOINT: string;
@@ -12,6 +12,7 @@ interface AppwriteEnv {
   EXPO_PUBLIC_APPWRITE_EXPENSES_TABLE_ID: string;
   EXPO_PUBLIC_APPWRITE_MEALS_TABLE_ID: string;
   EXPO_PUBLIC_APPWRITE_STAFF_TABLE_ID: string;
+  EXPO_PUBLIC_APPWRITE_PAYMENTS_TABLE_ID: string;
   EXPO_PUBLIC_APPWRITE_BUCKET_ID: string;
 }
 
@@ -25,6 +26,7 @@ const {
   EXPO_PUBLIC_APPWRITE_EXPENSES_TABLE_ID,
   EXPO_PUBLIC_APPWRITE_MEALS_TABLE_ID,
   EXPO_PUBLIC_APPWRITE_STAFF_TABLE_ID,
+  EXPO_PUBLIC_APPWRITE_PAYMENTS_TABLE_ID,
   EXPO_PUBLIC_APPWRITE_BUCKET_ID,
 } = (Constants.expoConfig?.extra || {}) as AppwriteEnv;
 
@@ -44,6 +46,7 @@ export const appwriteConfig = {
   expensesTableId: EXPO_PUBLIC_APPWRITE_EXPENSES_TABLE_ID,
   mealsTableId: EXPO_PUBLIC_APPWRITE_MEALS_TABLE_ID,
   staffTableId: EXPO_PUBLIC_APPWRITE_STAFF_TABLE_ID,
+  paymentsTableId: EXPO_PUBLIC_APPWRITE_PAYMENTS_TABLE_ID,
   bucketId: EXPO_PUBLIC_APPWRITE_BUCKET_ID,
 };
 
@@ -56,6 +59,7 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 export const avatars = new Avatars(client);
 export const tables = new TablesDB(client);
+export const storage = new Storage(client);
 
 export { ID, Query };
 

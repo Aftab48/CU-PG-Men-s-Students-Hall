@@ -1,12 +1,22 @@
-import React from 'react'
-import { Text, View } from 'react-native'
+// app/(staff)/(tabs)/_layout.tsx
 
-const _layout = () => {
+import { Tabs } from "expo-router";
+import React from "react";
+
+export default function StaffTabLayout() {
   return (
-    <View>
-      <Text>_layout</Text>
-    </View>
-  )
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#1e40af",
+        tabBarInactiveTintColor: "#6b7280",
+        headerStyle: {
+          backgroundColor: "#1e40af",
+        },
+        headerTintColor: "#ffffff",
+        headerStatusBarHeight: 0,
+      }}
+    >
+      {/* Add your staff tab screens here */}
+    </Tabs>
+  );
 }
-
-export default _layout

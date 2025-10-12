@@ -6,13 +6,13 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 function getTomorrow(): Date {
@@ -76,6 +76,13 @@ function SkipDateRangeScreen() {
     return `${year}-${month}-${day}`;
   };
 
+  const formatLocalDMY = (d: Date) => {
+    const year = d.getFullYear();
+    const month = `${d.getMonth() + 1}`.padStart(2, "0");
+    const day = `${d.getDate()}`.padStart(2, "0");
+    return `${day}-${month}-${year}`;
+  };
+
   const handleSubmit = async () => {
     if (!user) {
       Alert.alert("Not signed in", "Please sign in again.");
@@ -108,7 +115,7 @@ function SkipDateRangeScreen() {
         Alert.alert("Error", result?.error || "Failed to update meals");
         return;
       }
-      Alert.alert("Saved", `Skipped meals from ${from} to ${to}.`, [
+      Alert.alert("Saved", `Skipped meals from ${formatLocalDMY(startDate)} to ${formatLocalDMY(endDate)}.`, [
         { text: "OK", onPress: () => router.back() },
       ]);
     } finally {
@@ -117,10 +124,10 @@ function SkipDateRangeScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-slate-50">
-      <View className="bg-emerald-600 p-6 pt-15">
+    <ScrollView className="flex-1 bg-white-100">
+      <View className="bg-navy p-6 pt-15">
         <Text className="text-2xl font-bold text-white">Skip Date Range</Text>
-        <Text className="text-base text-emerald-100 mt-1">
+        <Text className="text-base text-blue-200 mt-1">
           Select a start and end date within this month.
         </Text>
       </View>
@@ -128,14 +135,14 @@ function SkipDateRangeScreen() {
       <View className="p-4">
         {submitting && (
           <View className="bg-white rounded-xl p-4 mb-4 items-center">
-            <ActivityIndicator size="small" color="#059669" />
-            <Text className="text-sm text-gray-600 mt-2">Saving...</Text>
+            <ActivityIndicator size="small" color="#3B82F6" />
+            <Text className="text-sm text-gray-100 mt-2">Saving...</Text>
           </View>
         )}
         <View className="bg-white rounded-2xl p-5 shadow-lg mb-4">
-          <Text className="text-lg font-semibold text-gray-800 mb-2">Start date</Text>
-          <Text className="text-sm text-gray-600 mb-4">
-            Must be on or after {formatLocalYMD(minDate)}
+          <Text className="text-lg font-semibold text-dark-100 mb-2">Start date</Text>
+          <Text className="text-sm text-gray-100 mb-4">
+            Must be on or after {formatLocalDMY(minDate)}
           </Text>
 
           <TouchableOpacity
@@ -145,7 +152,7 @@ function SkipDateRangeScreen() {
             onPress={() => !submitting && setShowStartPicker(true)}
             disabled={submitting}
           >
-            <Text className="text-base text-gray-800">{formatLocalYMD(startDate)}</Text>
+            <Text className="text-base text-dark-100">{formatLocalDMY(startDate)}</Text>
           </TouchableOpacity>
 
           {showStartPicker && !submitting && (
@@ -161,9 +168,9 @@ function SkipDateRangeScreen() {
         </View>
 
         <View className="bg-white rounded-2xl p-5 shadow-lg mb-6">
-          <Text className="text-lg font-semibold text-gray-800 mb-2">End date</Text>
-          <Text className="text-sm text-gray-600 mb-4">
-            Must be on or before {formatLocalYMD(maxDate)}
+          <Text className="text-lg font-semibold text-dark-100 mb-2">End date</Text>
+          <Text className="text-sm text-gray-100 mb-4">
+            Must be on or before {formatLocalDMY(maxDate)}
           </Text>
 
           <TouchableOpacity
@@ -173,7 +180,7 @@ function SkipDateRangeScreen() {
             onPress={() => !submitting && setShowEndPicker(true)}
             disabled={submitting}
           >
-            <Text className="text-base text-gray-800">{formatLocalYMD(endDate)}</Text>
+            <Text className="text-base text-dark-100">{formatLocalDMY(endDate)}</Text>
           </TouchableOpacity>
 
           {showEndPicker && !submitting && (
@@ -189,7 +196,7 @@ function SkipDateRangeScreen() {
         </View>
 
         <TouchableOpacity
-          className="py-4 px-4 rounded-xl bg-emerald-600 items-center"
+          className="py-4 px-4 rounded-xl bg-primary items-center"
           onPress={handleSubmit}
           disabled={submitting}
         >
@@ -205,7 +212,7 @@ function SkipDateRangeScreen() {
           onPress={() => router.back()}
           disabled={submitting}
         >
-          <Text className="text-gray-800 text-base font-medium">Cancel</Text>
+          <Text className="text-dark-100 text-base font-medium">Cancel</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

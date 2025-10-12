@@ -5,15 +5,15 @@ import { router } from "expo-router";
 import { Eye, EyeOff, Lock } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -118,7 +118,7 @@ function UpdateBoarderPassword() {
   );
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-transparent" edges={['bottom', 'left', 'right']}>
       <LinearGradient colors={["#0f172a", "#1e293b"]} style={{ flex: 1 }}>
         <KeyboardAvoidingView
           className="flex-1"

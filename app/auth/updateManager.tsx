@@ -1,21 +1,21 @@
 import {
-  getManagerProfile,
-  updateManagerPassword,
+    getManagerProfile,
+    updateManagerPassword,
 } from "@/lib/actions/manager.actions";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Eye, EyeOff, Lock } from "lucide-react-native";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -100,7 +100,7 @@ function UpdateManagerPassword() {
   );
 
   return (
-    <SafeAreaView className="flex-1">
+    <SafeAreaView className="flex-1 bg-transparent" edges={['bottom', 'left', 'right']}>
       <LinearGradient colors={["#1e40af", "#3b82f6"]} className="flex-1">
         <KeyboardAvoidingView
           className="flex-1"

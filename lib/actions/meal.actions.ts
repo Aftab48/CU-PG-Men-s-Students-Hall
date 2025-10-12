@@ -2,7 +2,7 @@
 
 import { Stats } from "@/types";
 import { appwriteConfig, ID, Query, tables } from "../appwrite";
-import { toISODate } from "../utils";
+import { toISODate, toLocalISOString } from "../utils";
 
 export interface MealRecord {
   $id: string;
@@ -30,7 +30,7 @@ export async function getOrCreateMealRecord(
   date: string,
   mealType: "brunch" | "dinner"
 ) {
-  // Compute same-day range in ISO (UTC) to match seed style which stores full ISO datetimes
+  // Compute same-day range using local time ISO strings
   const { startOfDayIso, endOfDayIso } = getDayRangeIso(date);
   try {
     // Look for existing meal row for same day and meal type
@@ -378,5 +378,6 @@ function getDayRangeIso(input: string): { startOfDayIso: string; endOfDayIso: st
   }
   const start = new Date(year, month, day, 0, 0, 0, 0);
   const end = new Date(year, month, day, 23, 59, 59, 999);
-  return { startOfDayIso: start.toISOString(), endOfDayIso: end.toISOString() };
+  // Use local time ISO strings to prevent timezone conversion
+  return { startOfDayIso: toLocalISOString(start), endOfDayIso: toLocalISOString(end) };
 }

@@ -1,12 +1,14 @@
 // app/(manager)/(tabs)/expenses.tsx
 
 import { createExpense } from "@/lib/actions";
+import { formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { Calendar, Camera, Save } from "lucide-react-native";
+import { router } from "expo-router";
+import { Calendar, Camera, LogOut, Save } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -22,7 +24,13 @@ import {
 } from "react-native";
 
 function ExpenseLogging() {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  // Use local date instead of UTC
+  const getLocalDateString = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  };
+  
+  const [date, setDate] = useState(getLocalDateString());
   const [dateObj, setDateObj] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState<
@@ -44,7 +52,12 @@ function ExpenseLogging() {
   const [receipt, setReceipt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -82,7 +95,10 @@ function ExpenseLogging() {
         setAmount("");
         setDescription("");
         setReceipt(null);
-        Alert.alert("Success", "Expense entry saved successfully!");
+        const successMessage = receipt 
+          ? "Expense entry and receipt saved successfully!" 
+          : "Expense entry saved successfully!";
+        Alert.alert("Success", successMessage);
       } else {
         Alert.alert("Error", result.error || "Failed to save expense");
       }
@@ -97,7 +113,11 @@ function ExpenseLogging() {
     const currentDate = selectedDate ?? dateObj;
     if (Platform.OS !== "ios") setShowDatePicker(false);
     setDateObj(currentDate);
-    setDate(new Date(currentDate).toISOString().split("T")[0]);
+    // Use local date instead of UTC
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
+    const day = String(currentDate.getDate()).padStart(2, "0");
+    setDate(`${year}-${month}-${day}`);
   };
 
   const expenseCategories: (| "fish"
@@ -128,31 +148,41 @@ function ExpenseLogging() {
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-50"
+      className="flex-1 bg-white-100"
       keyboardShouldPersistTaps="handled"
     >
-      <LinearGradient colors={["#1e40af", "#3b82f6"]} className="p-6 pt-15">
-        <Text className="text-2xl font-bold text-white">Daily Expense</Text>
-        <Text className="text-base text-slate-200 mt-1">
-          Log your daily expenses
-        </Text>
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+        <View className="flex-row justify-between items-start mb-3 sm:mb-4">
+          <View className="flex-1">
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Daily Expense</Text>
+            <Text className="text-sm sm:text-base md:text-lg text-white/80 mt-0.5 sm:mt-1">
+              Log your daily expenses
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+          >
+            <LogOut size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
-      <View className="p-4 bg-slate-50">
-        <View className="bg-white rounded-2xl p-5 shadow-lg">
+      <View className="px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5 bg-white-100">
+        <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
           {/* Date */}
-          <Text className="text-lg font-semibold text-gray-800 mb-5">
+          <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-4 sm:mb-5">
             Entry Details
           </Text>
-          <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Date</Text>
+          <View className="mb-4 sm:mb-5">
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">Date</Text>
             <TouchableOpacity
-              className="flex-row items-center border border-gray-300 rounded-lg px-3 py-3"
+              className="flex-row items-center border border-gray-300 rounded-lg px-2.5 py-2.5 sm:px-3 sm:py-3"
               onPress={() => setShowDatePicker(true)}
               activeOpacity={0.8}
             >
-              <Calendar size={20} color="#6b7280" />
-              <Text className="ml-2 text-base text-gray-800">{date}</Text>
+              <Calendar size={18} color="#6b7280" />
+              <Text className="ml-2 text-sm sm:text-base text-dark-100">{formatDateForDisplay(date)}</Text>
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
@@ -165,8 +195,8 @@ function ExpenseLogging() {
           </View>
 
           {/* Category */}
-          <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">Category</Text>
+          <View className="mb-4 sm:mb-5">
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">Category</Text>
             <View className="border border-gray-300 rounded-lg overflow-hidden">
               <Picker
                 selectedValue={category}
@@ -180,12 +210,12 @@ function ExpenseLogging() {
           </View>
 
           {/* Amount */}
-          <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">
+          <View className="mb-4 sm:mb-5">
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">
               Amount Spent *
             </Text>
             <TextInput
-              className="border border-gray-300 rounded-lg px-3 py-3 text-base text-gray-800"
+              className="border border-gray-300 rounded-lg px-2.5 py-2.5 sm:px-3 sm:py-3 text-sm sm:text-base text-dark-100"
               value={amount}
               onChangeText={setAmount}
               placeholder="Enter amount"
@@ -194,12 +224,12 @@ function ExpenseLogging() {
           </View>
 
           {/* Description */}
-          <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">
+          <View className="mb-4 sm:mb-5">
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">
               Description *
             </Text>
             <TextInput
-              className="border border-gray-300 rounded-lg px-3 py-3 text-base text-gray-800 h-20"
+              className="border border-gray-300 rounded-lg px-2.5 py-2.5 sm:px-3 sm:py-3 text-sm sm:text-base text-dark-100 h-20"
               value={description}
               onChangeText={setDescription}
               placeholder="Enter description"
@@ -210,23 +240,23 @@ function ExpenseLogging() {
           </View>
 
           {/* Receipt */}
-          <View className="mb-5">
-            <Text className="text-sm font-medium text-gray-700 mb-2">
+          <View className="mb-4 sm:mb-5">
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">
               Receipt/Bill
             </Text>
             <TouchableOpacity
-              className="flex-row items-center justify-center py-4 px-5 border-2 border-dashed border-blue-700 rounded-lg gap-2"
+              className="flex-row items-center justify-center py-3 px-4 sm:py-4 sm:px-5 border-2 border-dashed border-primary rounded-lg gap-1.5 sm:gap-2"
               onPress={pickImage}
             >
-              <Camera size={24} color="#1e40af" />
-              <Text className="text-base text-blue-700 font-medium">
+              <Camera size={20} color="#3B82F6" />
+              <Text className="text-sm sm:text-base text-primary font-medium">
                 {receipt ? "Change Image" : "Upload Receipt"}
               </Text>
             </TouchableOpacity>
             {receipt && (
               <Image
                 source={{ uri: receipt }}
-                className="w-full h-52 rounded-lg mt-3"
+                className="w-full h-44 sm:h-52 rounded-lg mt-2.5 sm:mt-3"
                 resizeMode="contain"
               />
             )}
@@ -234,8 +264,8 @@ function ExpenseLogging() {
 
           {/* Save Button */}
           <TouchableOpacity
-            className={`flex-row items-center justify-center py-4 rounded-xl gap-2 mt-5 ${
-              loading ? "bg-emerald-400" : "bg-emerald-600"
+            className={`flex-row items-center justify-center py-3 sm:py-4 rounded-xl gap-1.5 sm:gap-2 mt-4 sm:mt-5 ${
+              loading ? "opacity-60 bg-primary" : "bg-primary"
             }`}
             onPress={handleSave}
             disabled={loading}
@@ -244,8 +274,8 @@ function ExpenseLogging() {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <>
-                <Save size={20} color="#ffffff" />
-                <Text className="text-white text-base font-semibold">
+                <Save size={18} color="#ffffff" />
+                <Text className="text-white text-sm sm:text-base font-semibold">
                   Save Entry
                 </Text>
               </>

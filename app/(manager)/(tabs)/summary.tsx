@@ -1,12 +1,16 @@
 // app/(manager)/(tabs)/summary.tsx
 
 import { getAllActiveBoarders, getExpensesForDateRange, getTotalExpenses } from "@/lib/actions";
+import { formatDateForDisplay } from "@/lib/utils";
+import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import {
   Calendar,
   Download,
   Eye,
   FileText,
+  LogOut,
   Receipt,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
@@ -20,33 +24,39 @@ import {
 } from "react-native";
 
 export default function MonthlySummaryScreen() {
+  const logout = useAuthStore((state) => state.logout);
 
- const [FileSystem, setFileSystem] = useState<any>(null);
- const [Sharing, setSharing] = useState<any>(null);
+  const handleLogout = () => {
+    logout();
+    router.replace("/");
+  };
 
- useEffect(() => {
-   const loadModules = async () => {
-     try {
-       const fs = await import("expo-file-system");
-       setFileSystem(fs);
-     } catch {}
-
-     try {
-       const sh = await import("expo-sharing");
-       setSharing(sh);
-     } catch {}
-   };
-
-   loadModules();
- }, []);
-
-
-
-  //const expenses = useExpenseStore((state) => state.expenses);
+  const [FileSystem, setFileSystem] = useState<any>(null);
+  const [Sharing, setSharing] = useState<any>(null);
   const [totalFunding, setTotalFunding] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        const fs = await import("expo-file-system/legacy");
+        setFileSystem(fs);
+      } catch (err) {
+        console.error("Failed to load FileSystem:", err);
+      }
+
+      try {
+        const sh = await import("expo-sharing");
+        setSharing(sh);
+      } catch (err) {
+        console.error("Failed to load Sharing:", err);
+      }
+    };
+
+    loadModules();
+  }, []);
 
   useEffect(() => {
     const loadTotals = async () => {
@@ -67,8 +77,9 @@ export default function MonthlySummaryScreen() {
         // Fetch recent (last 30 days) expenses from backend
         const now = new Date();
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const start = thirtyDaysAgo.toISOString().split("T")[0];
-        const end = now.toISOString().split("T")[0];
+        // Use local date formatting instead of UTC
+        const start = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(thirtyDaysAgo.getDate()).padStart(2, "0")}`;
+        const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
         const rows = await getExpensesForDateRange(start, end);
         const mapped = (rows || [])
           .map((r: any) => ({
@@ -123,9 +134,7 @@ export default function MonthlySummaryScreen() {
       }
 
       const fileUri = `${FileSystem.documentDirectory}expenses.csv`;
-      await FileSystem.writeAsStringAsync(fileUri, csv, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      await FileSystem.writeAsStringAsync(fileUri, csv);
       const canShare = await Sharing.isAvailableAsync();
       if (canShare) {
         await Sharing.shareAsync(fileUri, { mimeType: "text/csv" });
@@ -145,37 +154,47 @@ export default function MonthlySummaryScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-slate-50">
-      <LinearGradient colors={["#1e40af", "#3b82f6"]} className="p-6 pt-15">
-        <Text className="text-2xl font-bold text-white">Monthly Summary</Text>
-        <Text className="text-base text-slate-200 mt-1">
-          Last 30 days overview
-        </Text>
+    <ScrollView className="flex-1 bg-white-100">
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+        <View className="flex-row justify-between items-start mb-3 sm:mb-4">
+          <View className="flex-1">
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Monthly Summary</Text>
+            <Text className="text-sm sm:text-base md:text-lg text-white/80 mt-0.5 sm:mt-1">
+              Last 30 days overview
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={handleLogout}
+            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+          >
+            <LogOut size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
-      <View className="p-4">
+      <View className="px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-5">
         {/* Summary Cards */}
-        <View className="gap-3 mb-5">
-          <View className="bg-white rounded-xl p-4 shadow-sm">
-            <Text className="text-sm text-gray-600 mb-1">Total Funding</Text>
-            <Text className="text-2xl font-bold text-blue-700">
+        <View className="gap-2.5 sm:gap-3 mb-4 sm:mb-5 md:mb-6">
+          <View className="bg-white rounded-xl p-3 sm:p-4 shadow-sm">
+            <Text className="text-xs sm:text-sm text-gray-100 mb-0.5 sm:mb-1">Total Funding</Text>
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-primary">
               ₹{(loading ? 0 : totalFunding).toLocaleString()}
             </Text>
           </View>
-          <View className="bg-white rounded-xl p-4 shadow-sm">
-            <Text className="text-sm text-gray-600 mb-1">Total Expenses</Text>
-            <Text className="text-2xl font-bold text-red-600">
+          <View className="bg-white rounded-xl p-3 sm:p-4 shadow-sm">
+            <Text className="text-xs sm:text-sm text-gray-100 mb-0.5 sm:mb-1">Total Expenses</Text>
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-red-600">
               ₹{(loading ? 0 : totalExpenses).toLocaleString()}
             </Text>
           </View>
-          <View className="bg-white rounded-xl p-4 shadow-sm">
-            <Text className="text-sm text-gray-600 mb-1">
+          <View className="bg-white rounded-xl p-3 sm:p-4 shadow-sm">
+            <Text className="text-xs sm:text-sm text-gray-100 mb-0.5 sm:mb-1">
               Remaining Balance
             </Text>
             <Text
-              className={`text-2xl font-bold ${
+              className={`text-xl sm:text-2xl md:text-3xl font-bold ${
                 remainingBalance >= 0
-                  ? "text-emerald-600"
+                  ? "text-success"
                   : "text-red-600"
               }`}
             >
@@ -185,70 +204,70 @@ export default function MonthlySummaryScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View className="flex-row gap-3 mb-6">
+        <View className="flex-row gap-2.5 sm:gap-3 mb-5 sm:mb-6">
           <TouchableOpacity
-            className="flex-1 flex-row items-center justify-center bg-white py-3 rounded-lg gap-2 shadow-sm"
+            className="flex-1 flex-row items-center justify-center bg-white py-2.5 sm:py-3 rounded-lg gap-1.5 sm:gap-2 shadow-sm"
             onPress={handleExportCSV}
           >
-            <Download size={20} color="#1e40af" />
-            <Text className="text-sm font-medium text-gray-700">
+            <Download size={18} color="#3B82F6" />
+            <Text className="text-xs sm:text-sm font-medium text-gray-700">
               Export CSV
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 flex-row items-center justify-center bg-white py-3 rounded-lg gap-2 shadow-sm"
+            className="flex-1 flex-row items-center justify-center bg-white py-2.5 sm:py-3 rounded-lg gap-1.5 sm:gap-2 shadow-sm"
             onPress={handleMakePublic}
           >
-            <Eye size={20} color="#059669" />
-            <Text className="text-sm font-medium text-gray-700">
+            <Eye size={18} color="#1E3A8A" />
+            <Text className="text-xs sm:text-sm font-medium text-gray-700">
               Make Public
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Expenses List */}
-        <View className="bg-white rounded-2xl p-5 shadow-lg">
-          <Text className="text-lg font-semibold text-gray-800 mb-4">
+        <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
+          <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
             Recent Expenses
           </Text>
           {recentExpenses.length === 0 ? (
-            <View className="items-center py-10">
-              <FileText size={48} color="#9ca3af" />
-              <Text className="text-base text-gray-600 mt-3">
+            <View className="items-center py-8 sm:py-10">
+              <FileText size={40} color="#9ca3af" />
+              <Text className="text-sm sm:text-base text-gray-100 mt-2.5 sm:mt-3">
                 No expenses recorded yet
               </Text>
             </View>
           ) : (
             recentExpenses.map((expense: any) => (
-              <View key={expense.id} className="border-b border-gray-100 py-4">
+              <View key={expense.id} className="border-b border-gray-100 py-3 sm:py-4">
                 <View className="flex-row justify-between items-start">
-                  <View className="flex-1 mr-3">
-                    <Text className="text-base font-medium text-gray-800 mb-1">
+                  <View className="flex-1 mr-2.5 sm:mr-3">
+                    <Text className="text-sm sm:text-base md:text-lg font-medium text-dark-100 mb-0.5 sm:mb-1">
                       {expense.description}
                     </Text>
-                    <View className="flex-row items-center gap-1">
-                      <Calendar size={14} color="#6b7280" />
-                      <Text className="text-xs text-gray-600">
-                        {expense.date}
+                    <View className="flex-row items-center gap-0.5 sm:gap-1">
+                      <Calendar size={12} color="#6b7280" />
+                      <Text className="text-[10px] sm:text-xs text-gray-100">
+                        {formatDateForDisplay(expense.date)}
                       </Text>
-                      <Text className="text-xs text-gray-600 capitalize">
+                      <Text className="text-[10px] sm:text-xs text-gray-100 capitalize">
                         • {expense.category}
                       </Text>
                     </View>
                   </View>
-                  <Text className="text-lg font-bold text-red-600">
+                  <Text className="text-base sm:text-lg md:text-xl font-bold text-red-600">
                     ₹{expense.amount.toLocaleString()}
                   </Text>
                 </View>
                 {expense.receipt && (
-                  <View className="flex-row items-center mt-2 gap-2">
-                    <Receipt size={16} color="#6b7280" />
-                    <Text className="text-xs text-gray-600 flex-1">
+                  <View className="flex-row items-center mt-1.5 sm:mt-2 gap-1.5 sm:gap-2">
+                    <Receipt size={14} color="#6b7280" />
+                    <Text className="text-[10px] sm:text-xs text-gray-100 flex-1">
                       Receipt attached
                     </Text>
                     <Image
                       source={{ uri: expense.receipt }}
-                      className="w-10 h-10 rounded"
+                      className="w-9 h-9 sm:w-10 sm:h-10 rounded"
                     />
                   </View>
                 )}

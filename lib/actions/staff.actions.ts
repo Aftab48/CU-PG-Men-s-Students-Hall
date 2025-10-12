@@ -1,11 +1,12 @@
 import {
-    account,
-    appwriteConfig,
-    avatars,
-    ID,
-    Query,
-    tables,
+  account,
+  appwriteConfig,
+  avatars,
+  ID,
+  Query,
+  tables,
 } from "../appwrite";
+import { getLocalTimestamp } from "../utils";
 
 export interface StaffProfile {
   $id: string;
@@ -37,7 +38,7 @@ export async function createStaffAccount(staffData: StaffSignupData) {
     );
 
     // Generate avatar URL
-    const avatarUrl = avatars.getInitials(staffData.name).toString();
+    const avatarUrl = avatars.getInitialsURL(staffData.name);
 
     // Create staff profile (table row)
     const staffProfile = await tables.createRow({
@@ -49,7 +50,7 @@ export async function createStaffAccount(staffData: StaffSignupData) {
         name: staffData.name,
         email: staffData.email,
         isActive: true,
-        createdAt: new Date().toISOString(),
+        createdAt: getLocalTimestamp(), // Use local timestamp
         avatarUrl,
       },
       permissions: ["role:all"], // optional, adjust if needed

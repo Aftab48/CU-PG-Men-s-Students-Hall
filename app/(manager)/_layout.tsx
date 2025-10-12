@@ -5,7 +5,7 @@ import React from "react";
 
 export default function ManagerLayout() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false}}>
       <Stack.Screen name="(tabs)" />
     </Stack>
   );

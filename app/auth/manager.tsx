@@ -7,15 +7,15 @@ import { router } from "expo-router";
 import { Calculator, Eye, EyeOff, Lock, Mail } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -66,8 +66,8 @@ function ManagerLoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1">
-      <LinearGradient colors={["#1e40af", "#3b82f6"]} className="flex-1">
+    <SafeAreaView className="flex-1 bg-transparent" edges={['bottom', 'left', 'right']}>
+      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="flex-1">
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -86,7 +86,7 @@ function ManagerLoginScreen() {
                 <Text className="text-3xl font-bold text-white mt-4">
                   Manager Login
                 </Text>
-                <Text className="text-base text-slate-200 text-center mt-2">
+                <Text className="text-base text-white/80 text-center mt-2">
                   Access your management dashboard
                 </Text>
               </View>
@@ -96,7 +96,7 @@ function ManagerLoginScreen() {
                 <View className="flex-row items-center bg-white rounded-xl px-4 py-1">
                   <Mail size={20} color="#6b7280" className="mr-3" />
                   <TextInput
-                    className="flex-1 text-base text-gray-800 py-4"
+                    className="flex-1 text-base text-dark-100 py-4"
                     placeholder="Email address"
                     placeholderTextColor="#9ca3af"
                     value={email}
@@ -110,7 +110,7 @@ function ManagerLoginScreen() {
                 <View className="flex-row items-center bg-white rounded-xl px-4 py-1">
                   <Lock size={20} color="#6b7280" className="mr-3" />
                   <TextInput
-                    className="flex-1 text-base text-gray-800 py-4"
+                    className="flex-1 text-base text-dark-100 py-4"
                     placeholder="Password"
                     placeholderTextColor="#9ca3af"
                     value={password}
@@ -131,16 +131,16 @@ function ManagerLoginScreen() {
 
                 {/* Login button */}
                 <TouchableOpacity
-                  className={`bg-orange-600 rounded-xl py-4 items-center mt-5 ${
+                  className={`bg-white rounded-xl py-4 items-center mt-5 ${
                     loading ? "opacity-60" : ""
                   }`}
                   onPress={handleLogin}
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#ffffff" />
+                    <ActivityIndicator color="#3B82F6" />
                   ) : (
-                    <Text className="text-white text-base font-semibold">
+                    <Text className="text-primary text-base font-semibold">
                       Sign In
                     </Text>
                   )}
@@ -148,10 +148,10 @@ function ManagerLoginScreen() {
 
                 {/* Change Password button */}
                 <TouchableOpacity
-                  className="bg-gray-200 rounded-xl py-4 items-center mt-3"
+                  className="bg-white/20 rounded-xl py-4 items-center mt-3"
                   onPress={() => router.replace("/auth/updateManager")}
                 >
-                  <Text className="text-gray-800 text-base font-semibold">
+                  <Text className="text-white text-base font-semibold">
                     Change Password
                   </Text>
                 </TouchableOpacity>
