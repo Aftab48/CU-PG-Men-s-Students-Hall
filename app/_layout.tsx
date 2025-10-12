@@ -2,7 +2,7 @@
 
 import { useAuthStore } from "@/stores/auth-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Audio } from "expo-av";
+import { requestRecordingPermissionsAsync } from "expo-audio";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
 import { Stack } from "expo-router";
@@ -35,13 +35,13 @@ function RootLayoutNav() {
         const mediaPickerStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
         
         // Request microphone/audio recording permissions
-        const audioStatus = await Audio.requestPermissionsAsync();
+        const audioStatus = await requestRecordingPermissionsAsync();
         
         const allGranted = 
           mediaLibraryStatus.status === "granted" &&
           cameraStatus.status === "granted" &&
           mediaPickerStatus.status === "granted" &&
-          audioStatus.status === "granted";
+          audioStatus.granted === true;
         
         if (allGranted) {
           setPermissionsGranted(true);
@@ -50,7 +50,7 @@ function RootLayoutNav() {
           if (mediaLibraryStatus.status !== "granted") deniedPermissions.push("Media Library");
           if (cameraStatus.status !== "granted") deniedPermissions.push("Camera");
           if (mediaPickerStatus.status !== "granted") deniedPermissions.push("Photo Library");
-          if (audioStatus.status !== "granted") deniedPermissions.push("Microphone");
+          if (audioStatus.granted !== true) deniedPermissions.push("Microphone");
           
           Alert.alert(
             "Permissions Required",

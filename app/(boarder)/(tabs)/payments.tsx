@@ -82,12 +82,17 @@ function PaymentsScreen() {
 
       setLoading(true);
       
-      // Get the local asset using require resolve
-      const asset = await MediaLibrary.createAssetAsync(
-        require("@/assets/images/qr.jpg")
-      );
-      await MediaLibrary.createAlbumAsync("Downloads", asset, false);
-      Alert.alert("Success", "QR code saved to gallery");
+      // Load the asset and get its local URI
+      const asset = Asset.fromModule(require("@/assets/images/qr.jpg"));
+      await asset.downloadAsync();
+      
+      if (asset.localUri) {
+        const savedAsset = await MediaLibrary.createAssetAsync(asset.localUri);
+        await MediaLibrary.createAlbumAsync("Downloads", savedAsset, false);
+        Alert.alert("Success", "QR code saved to gallery");
+      } else {
+        throw new Error("Could not load QR code asset");
+      }
     } catch (error) {
       console.error("Download error:", error);
       Alert.alert("Error", "Failed to download QR code");
@@ -124,7 +129,7 @@ function PaymentsScreen() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,

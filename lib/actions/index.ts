@@ -5,4 +5,5 @@ export * from "./expense.actions";
 export * from "./manager.actions";
 export * from "./meal.actions";
 export * from "./staff.actions";
+export * from "./store.actions";
 

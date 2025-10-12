@@ -1,7 +1,7 @@
 // app/(manager)/(tabs)/_layout.tsx
 
 import { Tabs } from "expo-router";
-import { BarChart3, Calculator, FileText } from "lucide-react-native";
+import { BarChart3, Calculator, FileText, Package } from "lucide-react-native";
 import React from "react";
 
 export default function ManagerTabLayout() {
@@ -30,6 +30,16 @@ export default function ManagerTabLayout() {
           title: "Daily Expense",
           headerTitle: "",
           tabBarIcon: ({ color }) => <Calculator color={color} size={24} />,
+          headerStyle: { backgroundColor: "#1E3A8A" },
+          headerStatusBarHeight: 0,
+        }}
+      />
+      <Tabs.Screen
+        name="store-out"
+        options={{
+          title: "Store-out",
+          headerTitle: "",
+          tabBarIcon: ({ color }) => <Package color={color} size={24} />,
           headerStyle: { backgroundColor: "#1E3A8A" },
           headerStatusBarHeight: 0,
         }}
