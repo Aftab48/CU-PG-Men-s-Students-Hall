@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "CUPGMSH",
-    "slug": "cupgmsh",
+    "slug": "cupg",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "cupgmsh",
+    "scheme": "cupg",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
