@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import {
     Calendar,
     LogOut,
+    RefreshCcw,
     TrendingUp,
     Wallet
 } from "lucide-react-native";
@@ -62,21 +63,25 @@ function BalanceScreen() {
     router.replace("/");
   };
 
+  const handleRefresh = () => {
+    loadBoarderProfile(true); // Force refresh on button click
+  };
+
   useEffect(() => {
       if (user) {
-        loadBoarderProfile();
+        loadBoarderProfile(false); // Use cache on initial load
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const loadBoarderProfile = async () => {
+    const loadBoarderProfile = async (forceRefresh: boolean = false) => {
         if (!user) return;
     
         try {
-          const profile = await getBoarderProfile(user.id);
+          const profile = await getBoarderProfile(user.id, forceRefresh);
           setBoarderProfile(profile ?? null);
           if (profile?.$id) {
-            const mealsCountRes = await countCurrentMonthMealsForBoarder(profile.userId || user.id);
+            const mealsCountRes = await countCurrentMonthMealsForBoarder(profile.userId || user.id, forceRefresh);
             if (mealsCountRes.success) {
               setMonthlyMealsCount(mealsCountRes.count);
               // best-effort persist to profile if supported
@@ -132,12 +137,20 @@ function BalanceScreen() {
               View your advance payment and meals consumed
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={handleRefresh}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 

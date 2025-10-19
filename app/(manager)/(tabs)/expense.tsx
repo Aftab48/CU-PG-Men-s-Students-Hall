@@ -8,7 +8,7 @@ import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Calendar, Camera, LogOut, Save } from "lucide-react-native";
+import { Calendar, Camera, LogOut, RefreshCcw, Save } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -57,6 +57,17 @@ function ExpenseLogging() {
   const handleLogout = () => {
     logout();
     router.replace("/");
+  };
+
+  const handleRefresh = () => {
+    // Clear form for new entry
+    setAmount("");
+    setDescription("");
+    setReceipt(null);
+    setCategory("grocery");
+    const now = new Date();
+    setDateObj(now);
+    setDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`);
   };
 
   const pickImage = async () => {
@@ -151,20 +162,33 @@ function ExpenseLogging() {
       className="flex-1 bg-white-100"
       keyboardShouldPersistTaps="handled"
     >
-      <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
+      <LinearGradient
+        colors={["#1E3A8A", "#3B82F6"]}
+        className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15"
+      >
         <View className="flex-row justify-between items-start mb-3 sm:mb-4">
           <View className="flex-1">
-            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Daily Expense</Text>
+            <Text className="text-xl sm:text-2xl md:text-3xl font-bold text-white">
+              Daily Expense
+            </Text>
             <Text className="text-sm sm:text-base md:text-lg text-white/80 mt-0.5 sm:mt-1">
               Log your daily expenses
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={handleRefresh}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
@@ -175,14 +199,18 @@ function ExpenseLogging() {
             Entry Details
           </Text>
           <View className="mb-4 sm:mb-5">
-            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">Date</Text>
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">
+              Date
+            </Text>
             <TouchableOpacity
               className="flex-row items-center border border-gray-300 rounded-lg px-2.5 py-2.5 sm:px-3 sm:py-3"
               onPress={() => setShowDatePicker(true)}
               activeOpacity={0.8}
             >
               <Calendar size={18} color="#6b7280" />
-              <Text className="ml-2 text-sm sm:text-base text-dark-100">{formatDateForDisplay(date)}</Text>
+              <Text className="ml-2 text-sm sm:text-base text-dark-100">
+                {formatDateForDisplay(date)}
+              </Text>
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
@@ -196,16 +224,33 @@ function ExpenseLogging() {
 
           {/* Category */}
           <View className="mb-4 sm:mb-5">
-            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">Category</Text>
+            <Text className="text-xs sm:text-sm md:text-base font-medium text-gray-700 mb-1.5 sm:mb-2">
+              Category
+            </Text>
+
             <View className="border border-gray-300 rounded-lg overflow-hidden">
               <Picker
                 selectedValue={category}
                 onValueChange={(itemValue) => setCategory(itemValue)}
+                style={{ height: 50 }}
+                itemStyle={{ height: 50 }}
               >
                 {expenseCategories.map((cat) => (
-                  <Picker.Item key={cat} label={cat} value={cat} />
+                  <Picker.Item
+                    key={cat}
+                    label={cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    value={cat}
+                  />
                 ))}
               </Picker>
+            </View>
+            <View className="border border-gray-300 rounded-lg px-3 py-2 mb-2">
+              <Text className="text-sm sm:text-base text-gray-500">
+                Selected:
+              </Text>
+              <Text className="text-base sm:text-lg font-bold text-dark-100 capitalize">
+                {category}
+              </Text>
             </View>
           </View>
 

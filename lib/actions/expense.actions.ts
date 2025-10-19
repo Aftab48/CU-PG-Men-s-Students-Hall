@@ -1,5 +1,6 @@
 import { File } from "expo-file-system";
 import { appwriteConfig, ID, Query, storage, tables } from "../appwrite";
+import { CacheKeys, cacheManager } from "../cache";
 import { getLocalTimestamp, toISODate } from "../utils";
 
 export interface ExpenseRecord {
@@ -122,6 +123,13 @@ export async function createExpense(expenseData: ExpenseCreateData) {
       },
     });
 
+    // Invalidate relevant caches
+    const dateObj = new Date(expenseData.date);
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth() + 1;
+    await cacheManager.invalidate(CacheKeys.totalExpenses());
+    await cacheManager.invalidate(CacheKeys.monthlyExpensesSummary(year, month));
+
     return {
       success: true,
       expense: newExpense,
@@ -137,32 +145,39 @@ export async function createExpense(expenseData: ExpenseCreateData) {
 
 /**
  * Get expenses for a specific date range
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getExpensesForDateRange(
   startDate: string,
-  endDate: string
+  endDate: string,
+  forceRefresh: boolean = false
 ): Promise<ExpenseRecord[]> {
   try {
+    const cacheKey = CacheKeys.expensesForDateRange(startDate, endDate);
     
-    // Convert YYYY-MM-DD to ISO timestamp
-    // Start date: beginning of the day (00:00:00.000Z)
-    const startISO = `${startDate}T00:00:00.000Z`;
-    // End date: end of the day (23:59:59.999Z)
-    const endISO = `${endDate}T23:59:59.999Z`;
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        // Convert YYYY-MM-DD to ISO timestamp
+        // Start date: beginning of the day (00:00:00.000Z)
+        const startISO = `${startDate}T00:00:00.000Z`;
+        // End date: end of the day (23:59:59.999Z)
+        const endISO = `${endDate}T23:59:59.999Z`;
 
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.expensesTableId,
+          queries: [
+            Query.greaterThanEqual("date", startISO),
+            Query.lessThanEqual("date", endISO),
+            Query.orderDesc("date"),
+          ],
+        });
 
-
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.expensesTableId,
-      queries: [
-        Query.greaterThanEqual("date", startISO),
-        Query.lessThanEqual("date", endISO),
-        Query.orderDesc("date"),
-      ],
-    });
-
-    return response.rows as unknown as ExpenseRecord[];
+        return response.rows as unknown as ExpenseRecord[];
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get expenses for date range error:", error);
     return [];
@@ -172,29 +187,39 @@ export async function getExpensesForDateRange(
 /**
  * Compute total expenses over an optional date range. If not provided,
  * computes the sum of all expense rows.
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getTotalExpenses(options?: {
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
+  forceRefresh?: boolean;
 }): Promise<{ success: boolean; total?: number; error?: string }> {
   try {
-    const queries = [] as any[];
-    if (options?.startDate) {
-      queries.push(Query.greaterThanEqual("date", toISODate(options.startDate)));
-    }
-    if (options?.endDate) {
-      queries.push(Query.lessThanEqual("date", toISODate(options.endDate)));
-    }
+    const cacheKey = CacheKeys.totalExpenses(options?.startDate, options?.endDate);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const queries = [] as any[];
+        if (options?.startDate) {
+          queries.push(Query.greaterThanEqual("date", toISODate(options.startDate)));
+        }
+        if (options?.endDate) {
+          queries.push(Query.lessThanEqual("date", toISODate(options.endDate)));
+        }
 
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.expensesTableId,
-      queries,
-    });
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.expensesTableId,
+          queries,
+        });
 
-    const rows = response.rows as unknown as { amount?: number }[];
-    const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
-    return { success: true, total };
+        const rows = response.rows as unknown as { amount?: number }[];
+        const total = rows.reduce((sum, row) => sum + (row.amount || 0), 0);
+        return { success: true, total };
+      },
+      options?.forceRefresh || false
+    );
   } catch (error: any) {
     console.error("Get total expenses error:", error);
     return { success: false, error: error.message || "Failed to compute total expenses" };
@@ -203,16 +228,22 @@ export async function getTotalExpenses(options?: {
 
 /**
  * Get monthly expenses summary
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
-export async function getMonthlyExpensesSummary(year: number, month: number) {
+export async function getMonthlyExpensesSummary(year: number, month: number, forceRefresh: boolean = false) {
   try {
-    // Use local date formatting instead of UTC
-    const startDateObj = new Date(year, month - 1, 1);
-    const endDateObj = new Date(year, month, 0);
-    const startDate = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, "0")}-${String(startDateObj.getDate()).padStart(2, "0")}`;
-    const endDate = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, "0")}-${String(endDateObj.getDate()).padStart(2, "0")}`;
+    const cacheKey = CacheKeys.monthlyExpensesSummary(year, month);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        // Use local date formatting instead of UTC
+        const startDateObj = new Date(year, month - 1, 1);
+        const endDateObj = new Date(year, month, 0);
+        const startDate = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, "0")}-${String(startDateObj.getDate()).padStart(2, "0")}`;
+        const endDate = `${endDateObj.getFullYear()}-${String(endDateObj.getMonth() + 1).padStart(2, "0")}-${String(endDateObj.getDate()).padStart(2, "0")}`;
 
-    const expenses = await getExpensesForDateRange(startDate, endDate);
+        const expenses = await getExpensesForDateRange(startDate, endDate, forceRefresh);
 
     const totalExpenses = expenses.reduce(
       (sum, expense) => sum + expense.amount,
@@ -232,23 +263,26 @@ export async function getMonthlyExpensesSummary(year: number, month: number) {
       return acc;
     }, {});
 
-    return {
-      success: true,
-      summary: {
-        totalExpenses,
-        groceriesTotal,
-        otherTotal,
-        totalsByCategory,
-        expenseCount: expenses.length,
-        expenses,
-        period: {
-          startDate,
-          endDate,
-          month,
-          year,
-        },
+        return {
+          success: true,
+          summary: {
+            totalExpenses,
+            groceriesTotal,
+            otherTotal,
+            totalsByCategory,
+            expenseCount: expenses.length,
+            expenses,
+            period: {
+              startDate,
+              endDate,
+              month,
+              year,
+            },
+          },
+        };
       },
-    };
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get monthly expenses summary error:", error);
     return {

@@ -4,7 +4,7 @@ import { getMealCountStats } from "@/lib/actions";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { BarChart3, Clock, LogOut } from "lucide-react-native";
+import { BarChart3, Clock, LogOut, RefreshCcw } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -26,16 +26,16 @@ function MealCount() {
   };
 
   useEffect(() => {
-    loadMealStats();
+    loadMealStats(false); // Use cache on initial load
   }, []);
 
-  const loadMealStats = async () => {
+  const loadMealStats = async (forceRefresh: boolean = false) => {
     setLoading(true);
     try {
       // Use local date instead of UTC
       const now = new Date();
       const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-      const result = await getMealCountStats(today);
+      const result = await getMealCountStats(today, forceRefresh);
 
       if (result.success) {
         setMealStats({
@@ -130,12 +130,20 @@ function MealCount() {
               Track today&apos;s meals
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={() => loadMealStats(true)} // Force refresh on button click
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 
@@ -160,7 +168,7 @@ function MealCount() {
             </Text>
             <TouchableOpacity
               className="mt-3 sm:mt-4 bg-primary px-5 py-2.5 sm:px-6 sm:py-3 rounded-lg"
-              onPress={loadMealStats}
+              onPress={() => loadMealStats(true)} // Force refresh on button click
             >
               <Text className="text-sm sm:text-base text-white font-medium">Refresh</Text>
             </TouchableOpacity>

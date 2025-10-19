@@ -2,6 +2,7 @@
 
 import { File } from "expo-file-system";
 import { account, appwriteConfig, avatars, ID, Query, storage, tables } from "../appwrite";
+import { CacheKeys, cacheManager } from "../cache";
 import { seedMealsForBoarder } from "../seedMeals";
 import { setMealStatusForDateRange } from "./meal.actions";
 
@@ -120,22 +121,31 @@ export async function signUpBoarderStep2(
 
 /**
  * Get boarder profile by user ID
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getBoarderProfile(
-  userId: string
+  userId: string,
+  forceRefresh: boolean = false
 ): Promise<BoarderProfile | null> {
   try {
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      queries: [Query.equal("userId", userId)],
-    });
+    const cacheKey = CacheKeys.boarderProfile(userId);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          queries: [Query.equal("userId", userId)],
+        });
 
-    if (response.rows.length === 0) {
-      return null;
-    }
-    return response.rows[0] as unknown as BoarderProfile;
-
+        if (response.rows.length === 0) {
+          return null;
+        }
+        return response.rows[0] as unknown as BoarderProfile;
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get boarder profile error:", error);
     return null;
@@ -144,18 +154,28 @@ export async function getBoarderProfile(
 
 /**
  * Get boarder profile by profile ID ($id)
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getBoarderProfileById(
-  profileId: string
+  profileId: string,
+  forceRefresh: boolean = false
 ): Promise<BoarderProfile | null> {
   try {
-    const response = await tables.getRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      rowId: profileId,
-    });
+    const cacheKey = CacheKeys.boarderProfileById(profileId);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.getRow({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          rowId: profileId,
+        });
 
-    return response as unknown as BoarderProfile;
+        return response as unknown as BoarderProfile;
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get boarder profile by ID error:", error);
     return null;
@@ -206,6 +226,9 @@ export async function updateBoarderProfile(
       rowId: profileId,
       data: updates,
     });
+
+    // Invalidate relevant caches
+    await cacheManager.invalidate(CacheKeys.boarderProfileById(profileId));
 
     return {
       success: true,
@@ -313,16 +336,25 @@ export async function updateBoarderBalance(
 
 /**
  * Get all active boarders (for manager view)
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
-export async function getAllActiveBoarders(): Promise<BoarderProfile[]> {
+export async function getAllActiveBoarders(forceRefresh: boolean = false): Promise<BoarderProfile[]> {
   try {
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      queries: [Query.equal("isActive", true), Query.orderDesc("$updatedAt")],
-    });
+    const cacheKey = CacheKeys.allActiveBoarders();
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          queries: [Query.equal("isActive", true), Query.orderDesc("$updatedAt")],
+        });
 
-    return response.rows as unknown as BoarderProfile[];
+        return response.rows as unknown as BoarderProfile[];
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get all boarders error:", error);
     return [];

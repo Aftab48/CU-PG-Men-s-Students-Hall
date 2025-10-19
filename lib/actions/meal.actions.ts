@@ -2,6 +2,7 @@
 
 import { Stats } from "@/types";
 import { appwriteConfig, ID, Query, tables } from "../appwrite";
+import { CacheKeys, cacheManager } from "../cache";
 import { toISODate, toLocalISOString } from "../utils";
 
 export interface MealRecord {
@@ -88,6 +89,12 @@ export async function toggleMealStatus(
       rowId: mealRecord.$id,
       data: { status },
     });
+
+    // Invalidate relevant caches
+    await cacheManager.invalidate(CacheKeys.mealRecord(boarderId, date, mealType));
+    await cacheManager.invalidate(CacheKeys.mealRecordsForDate(date));
+    await cacheManager.invalidate(CacheKeys.mealCountStats(date));
+    await cacheManager.invalidate(CacheKeys.monthlyMealsCount(boarderId));
 
     return { success: true, record: updatedRecord };
   } catch (error: any) {
@@ -196,22 +203,32 @@ export async function markMealAsTaken(
 
 /**
  * Get meal records for a specific date
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getMealRecordsForDate(
-  date: string
+  date: string,
+  forceRefresh: boolean = false
 ): Promise<MealRecord[]> {
   const { startOfDayIso, endOfDayIso } = getDayRangeIso(date);
   try {
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.mealsTableId,
-      queries: [
-        Query.between("date", startOfDayIso, endOfDayIso),
-        Query.orderAsc("boarderId"),
-      ],
-    });
+    const cacheKey = CacheKeys.mealRecordsForDate(date);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.mealsTableId,
+          queries: [
+            Query.between("date", startOfDayIso, endOfDayIso),
+            Query.orderAsc("boarderId"),
+          ],
+        });
 
-    return response.rows as unknown as MealRecord[];
+        return response.rows as unknown as MealRecord[];
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get meal records for date error:", error);
     return [];
@@ -220,23 +237,33 @@ export async function getMealRecordsForDate(
 
 /**
  * Get meal records for a specific boarder
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function getMealRecordsForBoarder(
   boarderId: string,
-  limit: number = 30
+  limit: number = 30,
+  forceRefresh: boolean = false
 ): Promise<MealRecord[]> {
   try {
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.mealsTableId,
-      queries: [
-        Query.equal("boarderId", boarderId),
-        Query.orderDesc("date"),
-        Query.limit(limit),
-      ],
-    });
+    const cacheKey = CacheKeys.mealRecordsForBoarder(boarderId, limit);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.mealsTableId,
+          queries: [
+            Query.equal("boarderId", boarderId),
+            Query.orderDesc("date"),
+            Query.limit(limit),
+          ],
+        });
 
-    return response.rows as unknown as MealRecord[];
+        return response.rows as unknown as MealRecord[];
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get meal records for boarder error:", error);
     return [];
@@ -245,26 +272,37 @@ export async function getMealRecordsForBoarder(
 
 /**
  * Count ON meals for a boarder within a date range (inclusive)
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
 export async function countOnMealsForBoarder(
   boarderId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  forceRefresh: boolean = false
 ) {
   const { startOfDayIso: startIso } = getDayRangeIso(startDate);
   const { endOfDayIso: endIso } = getDayRangeIso(endDate);
   try {
-    const response = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.mealsTableId,
-      queries: [
-        Query.equal("boarderId", boarderId),
-        Query.between("date", startIso, endIso),
-        Query.equal("status", "ON"),
-      ],
-    });
+    // Use a simple cache key based on boarder and date range
+    const cacheKey = `count_meals_${boarderId}_${startDate}_${endDate}`;
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.mealsTableId,
+          queries: [
+            Query.equal("boarderId", boarderId),
+            Query.between("date", startIso, endIso),
+            Query.equal("status", "ON"),
+          ],
+        });
 
-    return { success: true, count: response.rows.length };
+        return { success: true, count: response.rows.length };
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Count ON meals for boarder error:", error);
     return { success: false, count: 0, error: error.message || "Failed to count meals" };
@@ -273,28 +311,35 @@ export async function countOnMealsForBoarder(
 
 /**
  * Count ON meals for the current month up to today
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
-export async function countCurrentMonthMealsForBoarder(boarderId: string) {
+export async function countCurrentMonthMealsForBoarder(boarderId: string, forceRefresh: boolean = false) {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   const endDate = new Date();
-  return countOnMealsForBoarder(boarderId, formatLocalYMD(startDate), formatLocalYMD(endDate));
+  return countOnMealsForBoarder(boarderId, formatLocalYMD(startDate), formatLocalYMD(endDate), forceRefresh);
 }
 
 /**
  * Get meal count statistics for a specific date and meal preference
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
  */
-export async function getMealCountStats(date: string) {
+export async function getMealCountStats(date: string, forceRefresh: boolean = false) {
   try {
-    const mealRecords = await getMealRecordsForDate(date);
+    const cacheKey = CacheKeys.mealCountStats(date);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const mealRecords = await getMealRecordsForDate(date, forceRefresh);
 
-    const boardersResponse = await tables.listRows({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      queries: [Query.equal("isActive", true)],
-    });
+        const boardersResponse = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          queries: [Query.equal("isActive", true)],
+        });
 
-    const boarders = boardersResponse.rows;
+        const boarders = boardersResponse.rows;
 
     // Map boarderId -> mealPreference
     const boarderPreferences = new Map<
@@ -343,7 +388,10 @@ export async function getMealCountStats(date: string) {
       }
     });
 
-    return { success: true, stats };
+        return { success: true, stats };
+      },
+      forceRefresh
+    );
   } catch (error: any) {
     console.error("Get meal count stats error:", error);
     return {

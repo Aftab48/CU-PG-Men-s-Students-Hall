@@ -72,7 +72,8 @@
           "photosPermission": "The app needs access to your photos to upload images.",
           "cameraPermission": "The app needs access to your camera to take photos."
         }
-      ]
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -93,7 +94,7 @@
       "EXPO_PUBLIC_APPWRITE_MEALS_TABLE_ID": "meals",
       "EXPO_PUBLIC_APPWRITE_STAFF_TABLE_ID": "staff",
       "EXPO_PUBLIC_APPWRITE_PAYMENTS_TABLE_ID": "payments",
-      "EXPO_PUBLIC_APPWRITE_STORE_TABLE_ID": "store", 
+      "EXPO_PUBLIC_APPWRITE_STORE_TABLE_ID": "store",
       "EXPO_PUBLIC_APPWRITE_BUCKET_ID": "68d02fbb001f33a507df"
     }
   }
