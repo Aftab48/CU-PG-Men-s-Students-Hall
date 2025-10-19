@@ -6,6 +6,8 @@ A comprehensive mobile application for managing boarding facility mess hall oper
 
 CUPGMSH is a complete mess hall management solution designed for boarding facilities. It streamlines meal tracking, expense management, payment processing, and financial reporting across three distinct user roles: Managers, Boarders, and Staff.
 
+📖 **For detailed information, check out**: [Public Launch Documentation](https://www.notion.so/Public-launch-of-CUPG-app-286d2352588f80d784aaef30f807ee9e)
+
 ## Features
 
 ### For Managers
