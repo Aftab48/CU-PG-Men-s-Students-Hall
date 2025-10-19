@@ -5,6 +5,7 @@ import {
   signUpBoarderStep2,
   universalLogin,
 } from "@/lib/actions";
+import { cacheManager } from "@/lib/cache";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -16,6 +17,7 @@ import {
   Lock,
   Mail,
   Phone,
+  RefreshCw,
   User
 } from "lucide-react-native";
 import React, { useState } from "react";
@@ -49,10 +51,24 @@ function BoarderLoginScreen() {
   >("veg");
 
   const [tempUserData, setTempUserData] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { login } = useAuthStore();
 
   // ------------------------- Handlers -------------------------
+  const handleRefreshCache = async () => {
+    setRefreshing(true);
+    try {
+      await cacheManager.clearAll();
+      Alert.alert("Success", "Cache cleared! Please try logging in again.");
+    } catch (error: any) {
+      console.error("Clear cache error:", error);
+      Alert.alert("Error", "Failed to clear cache");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Error", "Please fill in all fields");
@@ -184,9 +200,24 @@ function BoarderLoginScreen() {
             keyboardShouldPersistTaps="handled"
           >
             <View className="flex-1 p-6">
-              <TouchableOpacity className="mt-5" onPress={() => router.back()} disabled={loading}>
-                <Text className="text-white text-base">← Back</Text>
-              </TouchableOpacity>
+              <View className="flex-row justify-between items-center mt-5">
+                <TouchableOpacity onPress={() => router.back()} disabled={loading}>
+                  <Text className="text-white text-base">← Back</Text>
+                </TouchableOpacity>
+                
+                {!isSignup && (
+                  <TouchableOpacity 
+                    onPress={handleRefreshCache} 
+                    disabled={loading || refreshing}
+                    className="flex-row items-center"
+                  >
+                    <RefreshCw size={16} color="#ffffff" />
+                    <Text className="text-white text-sm ml-1">
+                      {refreshing ? "Refreshing..." : "Refresh"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
 
               <View className="items-center mt-10 mb-10">
                 <ChefHat size={50} color="#ffffff" />

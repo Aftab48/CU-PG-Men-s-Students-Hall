@@ -92,19 +92,14 @@ export async function signUpBoarderStep2(
         roomNum: profileData.roomNum,
         advance: profileData.advance,
         current: profileData.current,
-        isActive: true,
+        isActive: false,
         mealPreference: profileData.mealPreference,
         avatar: avatarUrl,
       },
     });
     console.log(boarderProfile);
     
-    // Seed meals for this new boarder through end of month (by userId)
-    try {
-      await seedMealsForBoarder(userId);
-    } catch (seedErr) {
-      console.error("Seed meals for new boarder failed:", seedErr);
-    }
+    // Note: Meals will be seeded when the manager approves this boarder
     
     return {
       success: true,
@@ -361,6 +356,90 @@ export async function getAllActiveBoarders(forceRefresh: boolean = false): Promi
   }
 }
 
+/**
+ * Get all pending boarders (isActive = false, for manager approval)
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
+ */
+export async function getPendingBoarders(forceRefresh: boolean = false): Promise<BoarderProfile[]> {
+  try {
+    const cacheKey = CacheKeys.pendingBoarders();
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        const response = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          queries: [Query.equal("isActive", false), Query.orderDesc("$createdAt")],
+        });
+
+        return response.rows as unknown as BoarderProfile[];
+      },
+      forceRefresh
+    );
+  } catch (error: any) {
+    console.error("Get pending boarders error:", error);
+    return [];
+  }
+}
+
+/**
+ * Approve a boarder by setting isActive to true
+ */
+export async function approveBoarder(profileId: string) {
+  try {
+    if (!profileId?.trim()) {
+      throw new Error("Profile ID is required");
+    }
+
+    // Get the boarder profile first to get userId
+    const profile = await tables.getRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+    });
+
+    const userId = profile?.userId;
+
+    const updatedProfile = await tables.updateRow({
+      databaseId: appwriteConfig.databaseId,
+      tableId: appwriteConfig.boardersTableId,
+      rowId: profileId,
+      data: { isActive: true },
+    });
+
+    // Invalidate relevant caches (including userId-based cache used in login)
+    await cacheManager.invalidate(CacheKeys.boarderProfileById(profileId));
+    await cacheManager.invalidate(CacheKeys.pendingBoarders());
+    await cacheManager.invalidate(CacheKeys.allActiveBoarders());
+    if (userId) {
+      await cacheManager.invalidate(CacheKeys.boarderProfile(userId));
+    }
+
+    // Seed meals in the background (don't await - fire and forget)
+    if (userId) {
+      seedMealsForBoarder(userId)
+        .then(() => {
+          console.log(`Meals seeded successfully for boarder ${userId}`);
+        })
+        .catch((err) => {
+          console.error(`Failed to seed meals for boarder ${userId}:`, err);
+        });
+    }
+
+    return {
+      success: true,
+      profile: updatedProfile,
+    };
+  } catch (error: any) {
+    console.error("Approve boarder error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to approve boarder",
+    };
+  }
+}
+
 
 /**
  * Convenience wrapper to skip meals for a boarder within a date range.
@@ -512,6 +591,14 @@ export async function submitPayment(
       rowId: profileId,
       data: { advance: newAdvance },
     });
+
+    // Invalidate payment-related caches so summary screen shows updated data
+    await cacheManager.invalidate(CacheKeys.allPayments());
+    await cacheManager.invalidate(CacheKeys.totalPayments());
+    await cacheManager.invalidate(CacheKeys.paymentsByBoarder(profileId));
+    // Also invalidate boarder profile cache
+    await cacheManager.invalidate(CacheKeys.boarderProfile(userId));
+    await cacheManager.invalidate(CacheKeys.boarderProfileById(profileId));
 
     return {
       success: true,

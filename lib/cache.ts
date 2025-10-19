@@ -117,6 +117,7 @@ export const CacheKeys = {
   boarderProfileById: (profileId: string) => `boarder_profile_by_id_${profileId}`,
   boarderProfileByEmail: (email: string) => `boarder_profile_by_email_${email}`,
   allActiveBoarders: () => `all_active_boarders`,
+  pendingBoarders: () => `pending_boarders`,
   mealRecord: (boarderId: string, date: string, mealType: string) => 
     `meal_record_${boarderId}_${date}_${mealType}`,
   mealRecordsForDate: (date: string) => `meal_records_date_${date}`,

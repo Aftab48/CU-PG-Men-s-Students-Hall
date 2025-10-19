@@ -20,10 +20,10 @@ export interface RoleData {
 /**
  * Determine user role + profile in parallel
  */
-export async function resolveUserRole(userId: string): Promise<RoleData | null> {
+export async function resolveUserRole(userId: string, forceRefresh: boolean = false): Promise<RoleData | null> {
   // Run all profile fetches concurrently
   const [ boarderProfile] = await Promise.all([
-    getBoarderProfile(userId),
+    getBoarderProfile(userId, forceRefresh),
     //getStaffProfile(userId),
   ]);
 
@@ -61,10 +61,17 @@ export async function universalLogin(email: string, password: string) {
     });
     const user = await account.get();
 
-    const roleData = await resolveUserRole(user.$id);
+    // Force refresh profile during login to get latest isActive status
+    const roleData = await resolveUserRole(user.$id, true);
     if (!roleData) {
       await account.deleteSession({ sessionId: "current" });
       throw new Error("User profile not found");
+    }
+
+    // Check if boarder account is active
+    if (roleData.role === "boarder" && !roleData.profile.isActive) {
+      await account.deleteSession({ sessionId: "current" });
+      throw new Error("Your account is pending approval by the manager. Please wait for activation.");
     }
 
     return {
@@ -99,6 +106,15 @@ export async function checkAuthStatus() {
         success: false,
         isAuthenticated: false,
         error: "User profile not found",
+      };
+    }
+
+    // Check if boarder account is active
+    if (roleData.role === "boarder" && !roleData.profile.isActive) {
+      return {
+        success: false,
+        isAuthenticated: false,
+        error: "Your account is pending approval by the manager.",
       };
     }
 

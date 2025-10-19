@@ -328,7 +328,7 @@ export default function MonthlySummaryScreen() {
         {activeTab === "expenses" ? (
           <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
             <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
-              Recent Expenses
+              Recent Expenses (Last 30 Days)
             </Text>
             {recentExpenses.length === 0 ? (
               <View className="items-center py-8 sm:py-10">
@@ -378,7 +378,7 @@ export default function MonthlySummaryScreen() {
         ) : (
           <View className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-lg">
             <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-3 sm:mb-4">
-              Recent Funding
+              Recent Funding (Last 30 Days)
             </Text>
             {recentPayments.length === 0 ? (
               <View className="items-center py-8 sm:py-10">
