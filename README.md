@@ -125,6 +125,8 @@ cupg/
 
 - [Caching Implementation](CACHING_IMPLEMENTATION.md) - Details on the caching strategy
 - [Payment Setup](PAYMENT_SETUP.md) - Payment system configuration
+- [Privacy Policy](PRIVACY_POLICY.md) - Data collection and privacy practices
+- [Terms & Conditions](TERMS_AND_CONDITIONS.md) - Terms of service and legal agreements
 
 ## Building for Production
 
