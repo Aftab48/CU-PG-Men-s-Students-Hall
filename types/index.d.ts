@@ -36,19 +36,39 @@ export interface ManagerLoginData {
   password: string;
 }
 
+export interface StaffProfile {
+  $id: string;
+  userId: string;
+  name: string;
+  email: string;
+  isActive: boolean;
+  $createdAt: string;
+  avatarUrl: string;
+}
+
 export interface AuthUser {
   $id: string;
   email: string;
   name: string;
-  role: "manager" | "boarder";
+  role: "manager" | "boarder" | "staff";
   profile: any;
 }
 
 export interface User {
   id: string;
   email: string;
-  role: "manager" | "boarder";
+  role: "manager" | "boarder" | "staff";
   name: string;
+}
+
+export interface MealLogEntry {
+  boarderId: string;
+  boarderName: string;
+  roomNumber?: string;
+  mealPreference: "veg" | "non-veg" | "egg" | "fish";
+  mealRecordId: string;
+  isServed: boolean;
+  servedByStaffId: string;
 }
 
 export interface Expense {

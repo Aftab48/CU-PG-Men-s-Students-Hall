@@ -2,7 +2,7 @@
 
 import { account, appwriteConfig, tables } from "../appwrite";
 import { getBoarderProfile, getBoarderProfileByEmail } from "./boarder.actions";
-//import { getStaffProfile } from "./staff.actions";
+import { getStaffProfile } from "./staff.actions";
 
 export interface AuthUser {
   $id: string;
@@ -22,13 +22,13 @@ export interface RoleData {
  */
 export async function resolveUserRole(userId: string, forceRefresh: boolean = false): Promise<RoleData | null> {
   // Run all profile fetches concurrently
-  const [ boarderProfile] = await Promise.all([
+  const [boarderProfile, staffProfile] = await Promise.all([
     getBoarderProfile(userId, forceRefresh),
-    //getStaffProfile(userId),
+    getStaffProfile(userId, forceRefresh),
   ]);
 
   if (boarderProfile) return { role: "boarder", profile: boarderProfile };
-  //if (staffProfile) return { role: "staff", profile: staffProfile };
+  if (staffProfile) return { role: "staff", profile: staffProfile };
 
   return null; // No profile found
 }
@@ -70,6 +70,12 @@ export async function universalLogin(email: string, password: string) {
 
     // Check if boarder account is active
     if (roleData.role === "boarder" && !roleData.profile.isActive) {
+      await account.deleteSession({ sessionId: "current" });
+      throw new Error("Your account is pending approval by the manager. Please wait for activation.");
+    }
+
+    // Check if staff account is active
+    if (roleData.role === "staff" && !roleData.profile.isActive) {
       await account.deleteSession({ sessionId: "current" });
       throw new Error("Your account is pending approval by the manager. Please wait for activation.");
     }

@@ -137,5 +137,8 @@ export const CacheKeys = {
     `total_payments_${startDate || 'all'}_${endDate || 'all'}`,
   paymentsByBoarder: (boarderId: string) => `payments_boarder_${boarderId}`,
   monthlyMealsCount: (boarderId: string) => `monthly_meals_count_${boarderId}`,
+  pendingStaff: () => `pending_staff`,
+  mealLogForSlot: (date: string, mealType: string) => `meal_log_${date}_${mealType}`,
+  staffProfile: (userId: string) => `staff_profile_${userId}`,
 };
 

@@ -191,6 +191,10 @@ export async function markMealAsTaken(
       data: { servedByStaffId: staffId },
     });
 
+    // Invalidate meal log cache for this slot
+    await cacheManager.invalidate(CacheKeys.mealLogForSlot(isoDate, mealType));
+    await cacheManager.invalidate(CacheKeys.mealRecordsForDate(isoDate));
+
     return { success: true, record: updatedRecord };
   } catch (error: any) {
     console.error("Mark meal as taken error:", error);
@@ -400,6 +404,110 @@ export async function getMealCountStats(date: string, forceRefresh: boolean = fa
       stats: null,
     };
   }
+}
+
+/**
+ * Get boarders for current meal slot with ±10 min leniency
+ * Brunch: 10:00 - 14:10
+ * Dinner: 20:00 - 22:10
+ * @param date - Date string in YYYY-MM-DD format
+ * @param mealType - Meal type (brunch or dinner)
+ * @param forceRefresh - If true, bypasses cache and fetches fresh data
+ */
+export async function getBoardersForCurrentMealSlot(
+  date: string,
+  mealType: "brunch" | "dinner",
+  forceRefresh: boolean = false
+) {
+  try {
+    const cacheKey = CacheKeys.mealLogForSlot(date, mealType);
+    
+    return await cacheManager.cacheOrFetch(
+      cacheKey,
+      async () => {
+        // Get meal records for this date and meal type
+        const { startOfDayIso, endOfDayIso } = getDayRangeIso(date);
+        
+        const mealRecordsResponse = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.mealsTableId,
+          queries: [
+            Query.between("date", startOfDayIso, endOfDayIso),
+            Query.equal("mealType", mealType),
+            Query.equal("status", "ON"),
+          ],
+        });
+
+        const mealRecords = mealRecordsResponse.rows;
+
+        // Get boarder profiles for all boarders with meals ON
+        const boarderIds = mealRecords.map((record: any) => record.boarderId);
+        
+        if (boarderIds.length === 0) {
+          return { success: true, boarders: [] };
+        }
+
+        const boardersResponse = await tables.listRows({
+          databaseId: appwriteConfig.databaseId,
+          tableId: appwriteConfig.boardersTableId,
+          queries: [Query.equal("isActive", true)],
+        });
+
+        const boardersMap = new Map();
+        boardersResponse.rows.forEach((boarder: any) => {
+          boardersMap.set(boarder.userId, boarder);
+        });
+
+        // Build meal log entries
+        const mealLogEntries = mealRecords.map((record: any) => {
+          const boarder = boardersMap.get(record.boarderId);
+          return {
+            boarderId: record.boarderId,
+            boarderName: boarder?.name || "Unknown",
+            roomNumber: boarder?.roomNumber || "",
+            mealPreference: boarder?.mealPreference || "non-veg",
+            mealRecordId: record.$id,
+            isServed: !!record.servedByStaffId,
+            servedByStaffId: record.servedByStaffId || "",
+          };
+        });
+
+        return { success: true, boarders: mealLogEntries };
+      },
+      forceRefresh
+    );
+  } catch (error: any) {
+    console.error("Get boarders for current meal slot error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to get boarders for meal slot",
+      boarders: [],
+    };
+  }
+}
+
+/**
+ * Check if current time is within a meal slot (with ±10 min leniency)
+ * Brunch: 10:00 - 14:10
+ * Dinner: 20:00 - 22:10
+ */
+export function getCurrentMealSlot(): { isInSlot: boolean; mealType: "brunch" | "dinner" | null } {
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  // Brunch: 10:00 (600 min) to 14:10 (850 min)
+  if (totalMinutes >= 600 && totalMinutes <= 850) {
+    return { isInSlot: true, mealType: "brunch" };
+  }
+
+  // Dinner: 20:00 (1200 min) to 22:10 (1330 min)
+  if (totalMinutes >= 1200 && totalMinutes <= 1330) {
+    return { isInSlot: true, mealType: "dinner" };
+  }
+
+  return { isInSlot: false, mealType: null };
 }
 
 // Helpers

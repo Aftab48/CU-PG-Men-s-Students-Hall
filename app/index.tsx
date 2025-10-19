@@ -4,14 +4,14 @@ import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-  Building2,
-  Calculator,
-  ChefHat,
-  UserCheck,
-  Users,
+    Building2,
+    Calculator,
+    ChefHat,
+    UserCheck,
+    Users,
 } from "lucide-react-native";
 import React, { useEffect } from "react";
-import { Alert, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LandingScreen() {
@@ -25,7 +25,7 @@ export default function LandingScreen() {
       } else if (user.role === "boarder") {
         router.replace("/(boarder)/(tabs)/meals");
       } else if (user.role === "staff") {
-        // router.replace("/(staff)/(tabs)");
+        router.replace("/(staff)/(tabs)/meal-log");
       }
     }
   }, [isAuthenticated, user]);
@@ -86,13 +86,13 @@ export default function LandingScreen() {
             {/* Staff */}
             <TouchableOpacity
               className="rounded-2xl overflow-hidden shadow-lg"
-              onPress={() => Alert.alert("Coming Soon", "Staff login feature is currently under development.")}
+              onPress={() => router.push("/auth/staff")}
             >
               <LinearGradient
                 colors={["#F9FAFB", "#FFFFFF"]}
                 className="p-6 items-center"
               >
-                <UserCheck size={40} color="#3B82F6" />
+                <UserCheck size={40} color="#7c3aed" />
                 <Text className="text-xl font-bold text-dark-100 mt-3">
                   Staff Login
                 </Text>
