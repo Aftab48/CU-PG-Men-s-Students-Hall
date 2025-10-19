@@ -6,22 +6,23 @@ import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-    Calendar,
-    Download,
-    Eye,
-    FileText,
-    LogOut,
-    Receipt,
-    User,
+  Calendar,
+  Download,
+  Eye,
+  FileText,
+  LogOut,
+  Receipt,
+  RefreshCcw,
+  User,
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    Image,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 export default function MonthlySummaryScreen() {
@@ -61,77 +62,78 @@ export default function MonthlySummaryScreen() {
     loadModules();
   }, []);
 
+  const loadTotals = async (forceRefresh: boolean = false) => {
+    setLoading(true);
+    try {
+      // Calculate total funding from payments table
+      const paymentsTotalRes = await getTotalPayments({ forceRefresh });
+      setTotalFunding(paymentsTotalRes.total || 0);
+
+      // Sum of all expenses
+      const expensesTotalRes = await getTotalExpenses({ forceRefresh });
+      setTotalExpenses(expensesTotalRes.total || 0);
+
+      // Fetch recent (last 30 days) expenses from backend
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      // Use local date formatting instead of UTC
+      const start = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(thirtyDaysAgo.getDate()).padStart(2, "0")}`;
+      const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      
+      // Fetch expenses
+      const expenseRows = await getExpensesForDateRange(start, end, forceRefresh);
+      const mappedExpenses = (expenseRows || [])
+        .map((r: any) => ({
+          id: r.$id ?? r.id,
+          date: r.date,
+          category: r.category,
+          amount: r.amount,
+          description: r.description,
+          receipt: r.receipt,
+          createdAt: r.$createdAt ?? r.createdAt,
+        }))
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentExpenses(mappedExpenses);
+
+      // Fetch payments
+      const paymentRows = await getPaymentsForDateRange(start, end, forceRefresh);
+      const mappedPayments = await Promise.all(
+        (paymentRows || []).map(async (p: any) => {
+          // Fetch boarder name using profile ID ($id)
+          let boarderName = "Unknown";
+          try {
+            const boarder = await getBoarderProfileById(p.boarderId, forceRefresh);
+            boarderName = boarder?.name || "Unknown";
+          } catch (err) {
+            console.error("Error fetching boarder:", err);
+          }
+          return {
+            id: p.$id,
+            amount: p.amount,
+            boarderId: p.boarderId,
+            boarderName,
+            paymentURL: p.paymentURL,
+            createdAt: p.$createdAt,
+          };
+        })
+      );
+      setRecentPayments(
+        mappedPayments.sort(
+          (a: any, b: any) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
+      );
+    } catch (err) {
+      console.error("Error loading data:", err);
+      setTotalFunding(0);
+      setTotalExpenses(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadTotals = async () => {
-      setLoading(true);
-      try {
-        // Calculate total funding from payments table
-        const paymentsTotalRes = await getTotalPayments();
-        setTotalFunding(paymentsTotalRes.total || 0);
-
-        // Sum of all expenses
-        const expensesTotalRes = await getTotalExpenses();
-        setTotalExpenses(expensesTotalRes.total || 0);
-
-        // Fetch recent (last 30 days) expenses from backend
-        const now = new Date();
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        // Use local date formatting instead of UTC
-        const start = `${thirtyDaysAgo.getFullYear()}-${String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0")}-${String(thirtyDaysAgo.getDate()).padStart(2, "0")}`;
-        const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-        
-        // Fetch expenses
-        const expenseRows = await getExpensesForDateRange(start, end);
-        const mappedExpenses = (expenseRows || [])
-          .map((r: any) => ({
-            id: r.$id ?? r.id,
-            date: r.date,
-            category: r.category,
-            amount: r.amount,
-            description: r.description,
-            receipt: r.receipt,
-            createdAt: r.$createdAt ?? r.createdAt,
-          }))
-          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setRecentExpenses(mappedExpenses);
-
-        // Fetch payments
-        const paymentRows = await getPaymentsForDateRange(start, end);
-        const mappedPayments = await Promise.all(
-          (paymentRows || []).map(async (p: any) => {
-            // Fetch boarder name using profile ID ($id)
-            let boarderName = "Unknown";
-            try {
-              const boarder = await getBoarderProfileById(p.boarderId);
-              boarderName = boarder?.name || "Unknown";
-            } catch (err) {
-              console.error("Error fetching boarder:", err);
-            }
-            return {
-              id: p.$id,
-              amount: p.amount,
-              boarderId: p.boarderId,
-              boarderName,
-              paymentURL: p.paymentURL,
-              createdAt: p.$createdAt,
-            };
-          })
-        );
-        setRecentPayments(
-          mappedPayments.sort(
-            (a: any, b: any) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-        );
-      } catch (err) {
-        console.error("Error loading data:", err);
-        setTotalFunding(0);
-        setTotalExpenses(0);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadTotals();
+    loadTotals(false); // Use cache on initial load
   }, []);
 
   const remainingBalance = useMemo(
@@ -216,12 +218,20 @@ export default function MonthlySummaryScreen() {
               Last 30 days overview
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={() => loadTotals(true)} // Force refresh on button click
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 

@@ -4,7 +4,7 @@ import { createStoreOut } from "@/lib/actions/store.actions";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { LogOut, Save } from "lucide-react-native";
+import { LogOut, RefreshCcw, Save } from "lucide-react-native";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -28,6 +28,10 @@ function StoreOut() {
     router.replace("/");
   };
 
+  const handleRefresh = () => {
+    setDescription("");
+  };
+
   const handleSave = async () => {
     Keyboard.dismiss();
 
@@ -48,6 +52,7 @@ function StoreOut() {
 
       if (result.success) {
         setDescription("");
+        // Note: Store-out doesn't have a cache yet, but invalidate if needed in future
         Alert.alert("Success", "Store-out entry saved successfully!");
       } else {
         Alert.alert("Error", result.error || "Failed to save store-out entry");
@@ -72,12 +77,20 @@ function StoreOut() {
               Record items taken from store
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={handleRefresh}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
       </LinearGradient>
 

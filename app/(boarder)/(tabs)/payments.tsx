@@ -10,27 +10,28 @@ import * as MediaLibrary from "expo-media-library";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
-  Copy,
-  Download,
-  Image as ImageIcon,
-  IndianRupee,
-  LogOut,
-  QrCode,
-  Share2,
-  Upload,
+    Copy,
+    Download,
+    Image as ImageIcon,
+    IndianRupee,
+    LogOut,
+    QrCode,
+    RefreshCcw,
+    Share2,
+    Upload,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const UPI_ID = "mdalam4884-1@okaxis"; // Actual UPI ID
@@ -46,16 +47,16 @@ function PaymentsScreen() {
 
   useEffect(() => {
     if (user) {
-      loadBoarderProfile();
+      loadBoarderProfile(false); // Use cache on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  const loadBoarderProfile = async () => {
+  const loadBoarderProfile = async (forceRefresh: boolean = false) => {
     if (!user) return;
 
     try {
-      const profile = await getBoarderProfile(user.id);
+      const profile = await getBoarderProfile(user.id, forceRefresh);
       setBoarderProfile(profile ?? null);
     } catch (error) {
       console.error("Failed to load boarder profile:", error);
@@ -65,6 +66,10 @@ function PaymentsScreen() {
   const handleLogout = () => {
     logout();
     router.replace("/");
+  };
+
+  const handleRefresh = () => {
+    loadBoarderProfile(true); // Force refresh on button click
   };
 
   const copyToClipboard = async () => {
@@ -185,7 +190,7 @@ function PaymentsScreen() {
               onPress: () => {
                 setAmount("");
                 setScreenshot(null);
-                loadBoarderProfile();
+                loadBoarderProfile(true); // Force refresh after payment
               },
             },
           ]
@@ -222,12 +227,20 @@ function PaymentsScreen() {
                 Add advance payment to your account
               </Text>
             </View>
-            <TouchableOpacity
-              onPress={handleLogout}
-              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-            >
-              <LogOut size={20} color="#ffffff" />
-            </TouchableOpacity>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={handleRefresh}
+                className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+              >
+                <RefreshCcw size={20} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleLogout}
+                className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+              >
+                <LogOut size={20} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 

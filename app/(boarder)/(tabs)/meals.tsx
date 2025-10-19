@@ -10,7 +10,7 @@ import { canTurnOffMeal, formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Beef, Calendar, Clock, Coffee, Egg, Fish, Leaf, Lock, LogOut, Moon, Sun, User } from "lucide-react-native";
+import { Beef, Calendar, Clock, Coffee, Egg, Fish, Leaf, Lock, LogOut, Moon, RefreshCcw, Sun, User } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -55,17 +55,19 @@ function BoarderMealTracker() {
 
   useEffect(() => {
     if (user) {
-      loadMealRecord();
-      loadBoarderProfile();
+      loadMealRecord(false); // Use cache on initial load
+      loadBoarderProfile(false); // Use cache on initial load
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedDate]);
 
-  const loadMealRecord = async () => {
+  const loadMealRecord = async (forceRefresh: boolean = false) => {
     if (!user) return;
 
     setLoading(true);
     try {
+      // Note: getOrCreateMealRecord doesn't have cache since it creates records
+      // But we can invalidate cache after toggles
       const brunchRecord = await getOrCreateMealRecord(
         user.id,
         selectedDate,
@@ -89,11 +91,11 @@ function BoarderMealTracker() {
     }
   };
 
-  const loadBoarderProfile = async () => {
+  const loadBoarderProfile = async (forceRefresh: boolean = false) => {
     if (!user) return;
 
     try {
-      const profile = await getBoarderProfile(user.id);
+      const profile = await getBoarderProfile(user.id, forceRefresh);
       setBoarderProfile(profile ?? null);
       if (profile?.mealPreference) {
         setMealPreference(profile.mealPreference);
@@ -518,6 +520,11 @@ function BoarderMealTracker() {
     router.replace("/");
   };
 
+  const handleRefresh = () => {
+    loadMealRecord(true); // Force refresh on button click
+    loadBoarderProfile(true); // Force refresh on button click
+  };
+
   return (
     <ScrollView className="flex-1 bg-white-100">
       <LinearGradient colors={["#1E3A8A", "#3B82F6"]} className="px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 pt-12 sm:pt-14 md:pt-15">
@@ -531,12 +538,20 @@ function BoarderMealTracker() {
               Manage your meals and preferences
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={handleLogout}
-            className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
-          >
-            <LogOut size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              onPress={handleRefresh}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <RefreshCcw size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleLogout}
+              className="bg-white/20 rounded-full p-2.5 sm:p-3 md:p-3.5"
+            >
+              <LogOut size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tab Navigation */}
