@@ -3,10 +3,12 @@
     "name": "CUPGMSH",
     "slug": "cupg",
     "version": "1.0.0",
+    "description": "CUPG Mess Hall - A comprehensive mess hall management system for boarders, staff, and managers. Track meals, payments, expenses, and store inventory efficiently.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cupg",
     "userInterfaceStyle": "automatic",
+    "primaryColor": "#E6F4FE",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -18,6 +20,7 @@
       }
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

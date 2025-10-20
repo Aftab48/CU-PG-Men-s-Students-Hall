@@ -1,36 +1,36 @@
 // app/auth/boarder.tsx
 
 import {
-  signUpBoarderStep1,
-  signUpBoarderStep2,
-  universalLogin,
+    signUpBoarderStep1,
+    signUpBoarderStep2,
+    universalLogin,
 } from "@/lib/actions";
 import { cacheManager } from "@/lib/cache";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-  ChefHat,
-  Eye,
-  EyeOff,
-  Home,
-  Lock,
-  Mail,
-  Phone,
-  RefreshCw,
-  User
+    ChefHat,
+    Eye,
+    EyeOff,
+    Home,
+    Lock,
+    Mail,
+    Phone,
+    RefreshCw,
+    User
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -148,7 +148,6 @@ function BoarderLoginScreen() {
         tempUserData.$id,
         tempUserData.name,
         tempUserData.email,
-        password,
         {
           phoneNum: phoneNum.trim(),
           roomNum: roomNum.trim(),

@@ -9,7 +9,7 @@ import { setMealStatusForDateRange } from "./meal.actions";
 export interface BoarderSignupData {
   name: string;
   email: string;
-  password: string;
+  password: string; // Only for auth account creation, not stored in table
   phone?: string;
   roomNum?: string;
   advance?: number;
@@ -28,7 +28,6 @@ export interface BoarderProfile {
   userId: string;
   name: string;
   email: string;
-  password: string;
   phone?: string;
   roomNumber?: string;
   advance: number;
@@ -65,12 +64,12 @@ export async function signUpBoarderStep1(userData: BoarderSignupData) {
 
 /**
  * Sign up a new boarder - Step 2: Create profile with additional details
+ * Note: Password is not stored in boarders table, only used for auth
  */
 export async function signUpBoarderStep2(
   userId: string,
   name: string,
   email: string,
-  password: string,
   profileData: BoarderSignupStep2Data
 ) {
   try {
@@ -87,7 +86,6 @@ export async function signUpBoarderStep2(
         userId,
         name,
         email,
-        password,
         phone: profileData.phoneNum,
         roomNum: profileData.roomNum,
         advance: profileData.advance,

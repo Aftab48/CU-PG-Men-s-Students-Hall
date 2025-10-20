@@ -16,12 +16,13 @@ The Application collects information when you download and use it. This informat
 For a better experience while using the Application, the Service Provider may require you to provide certain personally identifiable information. The information collected and its purposes are:
 
 *   **Name**: To identify users and personalize the Application experience
-*   **Email**: For account verification, communication, and password recovery
+*   **Email**: For account verification and communication
 *   **Phone Number**: For account security and important notifications
 *   **Age and Gender**: For demographic analytics and service improvement
 *   **Meal Records**: To track and manage meal consumption
 *   **Payment Information**: To process and track payments for mess services
 *   **Balance and Financial Data**: To manage your account balance and transactions
+*   **Manager Credentials**: Administrative accounts use password authentication for secure access to management features
 
 The Application **does not** collect precise location information. Your geographical location is not tracked or stored.
 

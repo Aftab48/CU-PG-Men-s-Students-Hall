@@ -1,7 +1,7 @@
 export interface BoarderSignupData {
   name: string;
   email: string;
-  password: string;
+  password: string; // Only for auth account creation, not stored in table
   phone?: string;
   roomNum?: string;
   advance?: number;
@@ -12,7 +12,6 @@ export interface BoarderProfile {
   userId: string;
   name: string;
   email: string;
-  password: string;
   phone?: string;
   roomNumber?: string;
   advance: number;
