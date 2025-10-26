@@ -45,23 +45,36 @@ This Appwrite Function sends scheduled push notifications to boarders about thei
 Add these environment variables in the Function settings:
 
 ```
-DATABASE_ID=68cd9eac0039ed81523e
-BOARDERS_TABLE_ID=boarders
-MEALS_TABLE_ID=meals
-PUSH_TOKENS_TABLE_ID=push_tokens
+DATABASE_ID=
+BOARDERS_TABLE_ID=
+MEALS_TABLE_ID=
+PUSH_TOKENS_TABLE_ID=
 ```
 
-### 3. Create Schedule Triggers
+### 3. Set Schedule Trigger
 
-Add two schedule triggers:
+Appwrite allows only one cron schedule per function. Set it to run every hour, and the function will internally check the time and send notifications at the appropriate hours.
 
-**Trigger 1: Brunch Reminders**
-- Schedule: `0 23 * * *` (11 PM daily)
-- Timezone: Asia/Kolkata (or your timezone)
+**Schedule (Cron syntax):**
+```
+0 * * * *
+```
 
-**Trigger 2: Dinner Reminders**
-- Schedule: `0 15 * * *` (3 PM daily)
-- Timezone: Asia/Kolkata (or your timezone)
+This means: Run at the start of every hour.
+
+**How it works:**
+- The function checks the current hour when it runs
+- At **11 PM (23:00 IST)**: Sends brunch reminders for tomorrow
+- At **3 PM (15:00 IST)**: Sends dinner reminders for today
+- At all other hours: Does nothing and exits immediately
+
+**⚠️ Important - Timezone Note:**
+- Appwrite cron schedules run in **UTC timezone**
+- Your function code is already designed to handle the UTC offset
+- If your boarders are in IST (UTC+5:30), the function will trigger at:
+  - **17:00 UTC** (which is ~11:30 PM IST for brunch reminders)
+  - **09:00 UTC** (which is ~2:30 PM IST for dinner reminders)
+- The code has built-in hour checks (`currentHour === 22` and `currentHour === 14`) to catch these time differences
 
 ### 4. Set Permissions
 
@@ -99,6 +112,11 @@ Check function logs in Appwrite Console to see:
 
 ## Cost
 
-Appwrite Cloud Functions Free Tier: 750,000 executions/month
-This function runs 2 times/day = ~60 executions/month (0.008% of limit)
+**Appwrite Cloud Functions Free Tier:** 750,000 executions/month
+
+**This function:**
+- Runs every hour = 24 executions/day × 30 days = ~720 executions/month
+- Actually sends notifications only 2 times/day (at 11 PM and 3 PM)
+- Uses **0.096% of free tier limit**
+- The other 22 daily executions exit immediately (negligible cost)
 
