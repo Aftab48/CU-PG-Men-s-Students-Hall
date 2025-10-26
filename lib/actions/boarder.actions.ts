@@ -458,7 +458,7 @@ export async function skipMealsForDateRange(
 /**
  * Deduct a fixed charge per meal from boarder's balance
  */
-// export async function deductMealCharge(profileId: string, chargePerMeal = 50) {
+// export async function deductMealCharge(profileId: string, chargePerMeal = 30) {
 //   try {
 //     // Get current balance
 //     const row = await tables.getRow({
@@ -546,7 +546,8 @@ async function uploadPaymentScreenshot(localUri: string): Promise<string | null>
 }
 
 /**
- * Submit payment: upload screenshot, update boarder's advance, log as funding
+ * Submit payment: upload screenshot and create payment record with "pending" status
+ * Manager must approve before it's added to boarder's advance
  */
 export async function submitPayment(
   userId: string,
@@ -561,7 +562,7 @@ export async function submitPayment(
       throw new Error("Failed to upload payment screenshot");
     }
 
-    // Create payment record in PAYMENTS table
+    // Create payment record in PAYMENTS table with "pending" status
     await tables.createRow({
       databaseId: appwriteConfig.databaseId,
       tableId: appwriteConfig.paymentsTableId,
@@ -570,37 +571,17 @@ export async function submitPayment(
         amount,
         boarderId: profileId,
         paymentURL: paymentUrl,
+        status: "pending", // Payment starts as pending, requires manager approval
       },
     });
 
-    // Update boarder's advance balance
-    const currentProfile = await tables.getRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      rowId: profileId,
-    });
-
-    const currentAdvance = currentProfile?.advance ?? 0;
-    const newAdvance = currentAdvance + amount;
-
-    await tables.updateRow({
-      databaseId: appwriteConfig.databaseId,
-      tableId: appwriteConfig.boardersTableId,
-      rowId: profileId,
-      data: { advance: newAdvance },
-    });
-
-    // Invalidate payment-related caches so summary screen shows updated data
+    // Invalidate payment-related caches
     await cacheManager.invalidate(CacheKeys.allPayments());
-    await cacheManager.invalidate(CacheKeys.totalPayments());
     await cacheManager.invalidate(CacheKeys.paymentsByBoarder(profileId));
-    // Also invalidate boarder profile cache
-    await cacheManager.invalidate(CacheKeys.boarderProfile(userId));
-    await cacheManager.invalidate(CacheKeys.boarderProfileById(profileId));
+    await cacheManager.invalidate(CacheKeys.pendingPayments());
 
     return {
       success: true,
-      newAdvance,
       paymentUrl,
     };
   } catch (error: any) {

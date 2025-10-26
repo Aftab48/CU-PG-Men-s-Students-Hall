@@ -4,11 +4,11 @@ import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
-    Building2,
-    Calculator,
-    ChefHat,
-    UserCheck,
-    Users,
+  Building2,
+  Calculator,
+  ChefHat,
+  UserCheck,
+  Users,
 } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { Text, TouchableOpacity, View } from "react-native";

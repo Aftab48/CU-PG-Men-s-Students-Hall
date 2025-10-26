@@ -1,7 +1,9 @@
 // lib/actions/auth.actions.ts
 
 import { account } from "../appwrite";
+import { getDeviceId, getExpoPushToken } from "../notifications";
 import { getBoarderProfile, getBoarderProfileByEmail } from "./boarder.actions";
+import { deactivatePushToken, registerPushToken } from "./notifications.actions";
 import { getStaffProfile } from "./staff.actions";
 
 export interface AuthUser {
@@ -80,7 +82,7 @@ export async function universalLogin(email: string, password: string) {
       throw new Error("Your account is pending approval by the manager. Please wait for activation.");
     }
 
-    return {
+    const authResult = {
       success: true,
       user: {
         $id: user.$id,
@@ -90,12 +92,36 @@ export async function universalLogin(email: string, password: string) {
       },
       session,
     };
+
+    // Register push token for boarders (run in background, don't block login)
+    if (roleData.role === "boarder") {
+      registerPushTokenInBackground(user.$id);
+    }
+
+    return authResult;
   } catch (error: any) {
     console.error("Universal login error:", error);
     return {
       success: false,
       error: error.message || "Invalid email or password",
     };
+  }
+}
+
+/**
+ * Register push token in background (don't block login flow)
+ */
+async function registerPushTokenInBackground(userId: string) {
+  try {
+    const pushToken = await getExpoPushToken();
+    if (pushToken) {
+      const deviceId = await getDeviceId();
+      await registerPushToken(userId, pushToken, deviceId);
+      console.log("Push token registered successfully");
+    }
+  } catch (error) {
+    console.error("Failed to register push token:", error);
+    // Don't throw error, just log it
   }
 }
 
@@ -149,6 +175,17 @@ export async function checkAuthStatus() {
  */
 export async function logoutUser() {
   try {
+    // Get current user before logout
+    try {
+      const user = await account.get();
+      const deviceId = await getDeviceId();
+      // Deactivate push token (don't block logout if it fails)
+      await deactivatePushToken(user.$id, deviceId).catch(console.error);
+    } catch (err) {
+      // User might already be logged out, continue
+      console.log("Could not deactivate push token:", err);
+    }
+
     await account.deleteSession({ sessionId: "current" });
     return {
       success: true,

@@ -1,6 +1,7 @@
 // app/(boarder)/(tabs)/payments.tsx
 
-import { getBoarderProfile, submitPayment } from "@/lib/actions";
+import { getBoarderProfile, getPaymentsByBoarder, submitPayment } from "@/lib/actions";
+import { formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { Asset } from "expo-asset";
 import * as Clipboard from "expo-clipboard";
@@ -10,28 +11,34 @@ import * as MediaLibrary from "expo-media-library";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
-    Copy,
-    Download,
-    Image as ImageIcon,
-    IndianRupee,
-    LogOut,
-    QrCode,
-    RefreshCcw,
-    Share2,
-    Upload,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Copy,
+  Download,
+  Image as ImageIcon,
+  IndianRupee,
+  LogOut,
+  QrCode,
+  Receipt,
+  RefreshCcw,
+  Share2,
+  Upload,
+  XCircle,
 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const UPI_ID = "mdalam4884-1@okaxis"; // Actual UPI ID
@@ -44,6 +51,8 @@ function PaymentsScreen() {
   const [amount, setAmount] = useState("");
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -58,6 +67,12 @@ function PaymentsScreen() {
     try {
       const profile = await getBoarderProfile(user.id, forceRefresh);
       setBoarderProfile(profile ?? null);
+      
+      // Load payment history
+      if (profile?.$id) {
+        const payments = await getPaymentsByBoarder(profile.$id, forceRefresh, "all");
+        setPaymentHistory(payments);
+      }
     } catch (error) {
       console.error("Failed to load boarder profile:", error);
     }
@@ -183,7 +198,7 @@ function PaymentsScreen() {
       if (result.success) {
         Alert.alert(
           "Success",
-          `Payment of ₹${paymentAmount} submitted successfully! Your advance balance has been updated.`,
+          `Payment of ₹${paymentAmount} submitted successfully! Your payment is pending manager approval. Once approved, your advance balance will be updated.`,
           [
             {
               text: "OK",
@@ -404,12 +419,119 @@ function PaymentsScreen() {
                 1. Scan QR code or use UPI ID to make payment{"\n"}
                 2. Take a screenshot of successful payment{"\n"}
                 3. Upload screenshot and submit{"\n"}
-                4. Your advance balance will be updated after verification
+                4. Your advance balance will be updated after manager approval
               </Text>
             </View>
           </View>
+
+          {/* Payment History */}
+          {paymentHistory.length > 0 && (
+            <View className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6 mt-4 shadow-xl">
+              <Text className="text-base sm:text-lg md:text-xl font-semibold text-dark-100 mb-4">
+                Payment History
+              </Text>
+              {paymentHistory.map((payment: any) => {
+                const statusConfig = {
+                  pending: {
+                    icon: Clock,
+                    color: "#F59E0B",
+                    bgColor: "#FEF3C7",
+                    label: "Pending",
+                  },
+                  approved: {
+                    icon: CheckCircle,
+                    color: "#10B981",
+                    bgColor: "#D1FAE5",
+                    label: "Approved",
+                  },
+                  rejected: {
+                    icon: XCircle,
+                    color: "#EF4444",
+                    bgColor: "#FEE2E2",
+                    label: "Rejected",
+                  },
+                };
+
+                const status = statusConfig[payment.status as keyof typeof statusConfig] || statusConfig.pending;
+                const StatusIcon = status.icon;
+
+                return (
+                  <View
+                    key={payment.$id}
+                    className="border-b border-gray-100 py-3 sm:py-4 last:border-b-0"
+                  >
+                    <View className="flex-row justify-between items-start mb-2">
+                      <View className="flex-1">
+                        <Text className="text-base sm:text-lg font-bold text-dark-100">
+                          ₹{payment.amount.toLocaleString()}
+                        </Text>
+                        <View className="flex-row items-center gap-1 mt-1">
+                          <Calendar size={12} color="#6b7280" />
+                          <Text className="text-xs sm:text-sm text-gray-100">
+                            {formatDateForDisplay(payment.$createdAt)}
+                          </Text>
+                        </View>
+                      </View>
+                      <View
+                        className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full"
+                        style={{ backgroundColor: status.bgColor }}
+                      >
+                        <StatusIcon size={14} color={status.color} />
+                        <Text
+                          className="text-xs sm:text-sm font-medium"
+                          style={{ color: status.color }}
+                        >
+                          {status.label}
+                        </Text>
+                      </View>
+                    </View>
+                    {payment.paymentURL && (
+                      <View className="flex-row items-center mt-2 gap-2">
+                        <Receipt size={14} color="#6b7280" />
+                        <Text className="text-xs sm:text-sm text-gray-100 flex-1">
+                          Payment proof attached
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => setSelectedImage(payment.paymentURL)}
+                        >
+                          <Image
+                            source={{ uri: payment.paymentURL }}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Image Preview Modal */}
+      <Modal
+        visible={selectedImage !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedImage(null)}
+      >
+        <View className="flex-1 bg-black/90 justify-center items-center">
+          <TouchableOpacity
+            className="absolute top-12 right-4 bg-white/20 rounded-full p-3 z-10"
+            onPress={() => setSelectedImage(null)}
+          >
+            <Text className="text-white text-lg font-bold">✕</Text>
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image
+              source={{ uri: selectedImage }}
+              style={{ width: "90%", height: "80%" }}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }

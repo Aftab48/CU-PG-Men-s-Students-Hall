@@ -10,6 +10,10 @@
     },
     "preview": {
       "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
       "env": {
         "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "68c8ec1f002cb4b9ce1d",
         "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "CUPG",
@@ -27,6 +31,10 @@
     },
     "production": {
       "autoIncrement": true,
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      },
       "env": {
         "EXPO_PUBLIC_APPWRITE_PROJECT_ID": "68c8ec1f002cb4b9ce1d",
         "EXPO_PUBLIC_APPWRITE_PROJECT_NAME": "CUPG",

@@ -1,5 +1,10 @@
 // lib/utils.ts
 
+// Meal cost constants
+export const MEAL_COST = 30; // Cost per meal in rupees
+export const GUEST_MEAL_COST_CASUAL = 50; // Casual guest meal cost
+export const GUEST_MEAL_COST_NIGHT = 40; // Night guest meal cost
+
 export const formatIndianDate = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
   const month = String(date.getMonth() + 1).padStart(2, "0");

@@ -130,12 +130,14 @@ export const CacheKeys = {
     `total_expenses_${startDate || 'all'}_${endDate || 'all'}`,
   monthlyExpensesSummary: (year: number, month: number) => 
     `monthly_expenses_${year}_${month}`,
-  paymentsForDateRange: (startDate: string, endDate: string) => 
-    `payments_${startDate}_to_${endDate}`,
+  paymentsForDateRange: (startDate: string, endDate: string, status?: string) => 
+    `payments_${startDate}_to_${endDate}_${status || 'all'}`,
   allPayments: () => `all_payments`,
   totalPayments: (startDate?: string, endDate?: string) => 
     `total_payments_${startDate || 'all'}_${endDate || 'all'}`,
-  paymentsByBoarder: (boarderId: string) => `payments_boarder_${boarderId}`,
+  paymentsByBoarder: (boarderId: string, status?: string) => 
+    `payments_boarder_${boarderId}_${status || 'all'}`,
+  pendingPayments: () => `pending_payments`,
   monthlyMealsCount: (boarderId: string) => `monthly_meals_count_${boarderId}`,
   pendingStaff: () => `pending_staff`,
   mealLogForSlot: (date: string, mealType: string) => `meal_log_${date}_${mealType}`,

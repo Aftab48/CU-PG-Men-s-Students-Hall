@@ -1,6 +1,6 @@
 // app/(manager)/(tabs)/summary.tsx
 
-import { getBoarderProfileById, getExpensesForDateRange, getPaymentsForDateRange, getTotalExpenses, getTotalPayments } from "@/lib/actions";
+import { generateMonthlyBillingCSV, getBoarderProfileById, getExpensesForDateRange, getPaymentsForDateRange, getTotalExpenses, getTotalPayments } from "@/lib/actions";
 import { formatDateForDisplay } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
@@ -17,6 +17,7 @@ import {
 } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -38,6 +39,7 @@ export default function MonthlySummaryScreen() {
   const [totalFunding, setTotalFunding] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [exportingCSV, setExportingCSV] = useState(false);
   const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
   const [recentPayments, setRecentPayments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"expenses" | "funding">("expenses");
@@ -150,43 +152,16 @@ export default function MonthlySummaryScreen() {
         return;
       }
 
-      let csv = "";
-      let fileName = "";
+      setExportingCSV(true);
 
-      if (activeTab === "expenses") {
-        const header = [
-          "id,date,category,amount,description,receipt,createdAt",
-        ];
-        const rows = recentExpenses.map((e) =>
-          [
-            e.id,
-            e.date,
-            e.category,
-            e.amount,
-            JSON.stringify(e.description || ""),
-            JSON.stringify(e.receipt || ""),
-            e.createdAt || "",
-          ].join(",")
-        );
-        csv = [...header, ...rows].join("\n");
-        fileName = "expenses.csv";
-      } else {
-        const header = [
-          "id,boarderId,boarderName,amount,paymentURL,createdAt",
-        ];
-        const rows = recentPayments.map((p) =>
-          [
-            p.id,
-            p.boarderId,
-            JSON.stringify(p.boarderName || ""),
-            p.amount,
-            JSON.stringify(p.paymentURL || ""),
-            p.createdAt || "",
-          ].join(",")
-        );
-        csv = [...header, ...rows].join("\n");
-        fileName = "payments.csv";
-      }
+      // Generate monthly billing CSV
+      const csv = await generateMonthlyBillingCSV();
+      
+      // Get current month/year for filename
+      const now = new Date();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const year = now.getFullYear();
+      const fileName = `monthly-billing-${year}-${month}.csv`;
 
       const fileUri = `${FileSystem.documentDirectory}${fileName}`;
       await FileSystem.writeAsStringAsync(fileUri, csv);
@@ -198,6 +173,8 @@ export default function MonthlySummaryScreen() {
       }
     } catch (err: any) {
       Alert.alert("Export CSV Failed", err?.message || "Unknown error");
+    } finally {
+      setExportingCSV(false);
     }
   };
 
@@ -305,12 +282,19 @@ export default function MonthlySummaryScreen() {
         {/* Action Buttons */}
         <View className="flex-row gap-2.5 sm:gap-3 mb-5 sm:mb-6">
           <TouchableOpacity
-            className="flex-1 flex-row items-center justify-center bg-white py-2.5 sm:py-3 rounded-lg gap-1.5 sm:gap-2 shadow-sm"
+            className={`flex-1 flex-row items-center justify-center py-2.5 sm:py-3 rounded-lg gap-1.5 sm:gap-2 shadow-sm ${
+              exportingCSV ? "bg-gray-200" : "bg-white"
+            }`}
             onPress={handleExportCSV}
+            disabled={exportingCSV}
           >
-            <Download size={18} color="#3B82F6" />
+            {exportingCSV ? (
+              <ActivityIndicator size="small" color="#3B82F6" />
+            ) : (
+              <Download size={18} color="#3B82F6" />
+            )}
             <Text className="text-xs sm:text-sm font-medium text-gray-700">
-              Export CSV
+              {exportingCSV ? "Generating..." : "Export CSV"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

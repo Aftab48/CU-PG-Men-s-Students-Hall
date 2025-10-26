@@ -7,6 +7,7 @@ import {
     updateBoarderMealPreference,
 } from "@/lib/actions";
 import { canTurnOffMeal, formatDateForDisplay } from "@/lib/utils";
+import { requestNotificationPermissions } from "@/lib/notifications";
 import { useAuthStore } from "@/stores/auth-store";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -60,6 +61,15 @@ function BoarderMealTracker() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, selectedDate]);
+
+  // Request notification permissions on first load
+  useEffect(() => {
+    if (user) {
+      requestNotificationPermissions().catch((error) => {
+        console.error("Failed to request notification permissions:", error);
+      });
+    }
+  }, [user]);
 
   const loadMealRecord = async (forceRefresh: boolean = false) => {
     if (!user) return;
