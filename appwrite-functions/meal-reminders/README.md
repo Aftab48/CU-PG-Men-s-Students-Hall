@@ -1,24 +1,16 @@
-# Meal Reminders Appwrite Function
+# ⚡ Node.js Starter Function
 
-This Appwrite Function sends scheduled push notifications to boarders about their meal status.
+A simple starter function. Edit `src/main.js` to get started and create something awesome! 🚀
 
-## Schedule
+## 🧰 Usage
 
-- **11 PM (23:00)**: Send brunch reminders for tomorrow
-  - "Your brunch tomorrow is ON/OFF. You have until 5 AM to change it."
-  
-- **3 PM (15:00)**: Send dinner reminders for today
-  - "Your dinner today is ON/OFF. You have until 5 PM to change it."
+### GET /ping
 
-## Setup Instructions
+- Returns a "Pong" message.
 
-### 1. Create Function in Appwrite Console
+**Response**
 
-1. Go to your Appwrite Console → Functions
-2. Click "Create Function"
-3. Name it: `meal-reminders`
-4. Runtime: Node.js 18 or later
-5. Choose deployment method:
+Sample `200` Response:
 
 #### Option A: Git Integration (Recommended)
 1. Click "Connect Git Repository"
@@ -76,34 +68,24 @@ This means: Run at the start of every hour.
   - **09:00 UTC** (which is ~2:30 PM IST for dinner reminders)
 - The code has built-in hour checks (`currentHour === 22` and `currentHour === 14`) to catch these time differences
 
-### 4. Set Permissions
-
-Make sure the Function has:
-- Read access to `boarders` table
-- Read access to `meals` table  
-- Read access to `push_tokens` table
-
-### 5. Deploy
-
-Deploy the function and test it:
-- Use the "Execute Now" button in Appwrite Console
-- Check the logs to verify it's working
-- Send a test notification to verify delivery
-
-## Testing
-
-To test without waiting for the scheduled time:
-
-1. Temporarily modify the time check in `main.js`:
-```javascript
-if (currentHour === 23 || currentHour === 22 || currentHour === YOUR_CURRENT_HOUR) {
+```json
+{
+  "motto": "Build like a team of hundreds_",
+  "learn": "https://appwrite.io/docs",
+  "connect": "https://appwrite.io/discord",
+  "getInspired": "https://builtwith.appwrite.io"
+}
 ```
 
-2. Execute manually from Appwrite Console
-3. Check the logs for success/errors
-4. Verify notifications on your device
+## ⚙️ Configuration
 
-## Monitoring
+| Setting           | Value         |
+| ----------------- | ------------- |
+| Runtime           | Node (18.0)   |
+| Entrypoint        | `src/main.js` |
+| Build Commands    | `npm install` |
+| Permissions       | `any`         |
+| Timeout (Seconds) | 15            |
 
 Check function logs in Appwrite Console to see:
 - Number of boarders processed
@@ -119,4 +101,3 @@ Check function logs in Appwrite Console to see:
 - Actually sends notifications only 2 times/day (at 11 PM and 3 PM)
 - Uses **0.096% of free tier limit**
 - The other 22 daily executions exit immediately (negligible cost)
-
