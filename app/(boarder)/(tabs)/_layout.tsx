@@ -1,7 +1,7 @@
 // app/(boarder)/(tabs)/_layout.tsx
 
 import { Tabs } from "expo-router";
-import { ChefHat, CreditCard, Wallet } from "lucide-react-native";
+import { ChefHat, CreditCard, Users, Wallet } from "lucide-react-native";
 import React from "react";
 
 export default function BoarderTabLayout() {
@@ -39,6 +39,14 @@ export default function BoarderTabLayout() {
           title: "Balance",
           headerTitle: "",
           tabBarIcon: ({ color }) => <Wallet color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="guest-meals"
+        options={{
+          title: "Guest Meals",
+          headerTitle: "",
+          tabBarIcon: ({ color }) => <Users color={color} size={24} />,
         }}
       />
     </Tabs>

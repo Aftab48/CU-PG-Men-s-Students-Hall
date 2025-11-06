@@ -41,8 +41,8 @@ import {
   View,
 } from "react-native";
 
-const UPI_ID = "mdalam4884-1@okaxis"; // Actual UPI ID
-const QR_CODE_IMAGE = require("@/assets/images/qr.jpg"); // Local QR code image
+const UPI_ID = "cyclonepm2003@oksbi"; // Actual UPI ID
+const QR_CODE_IMAGE = require("@/assets/images/qr2.jpg"); // Local QR code image
 
 function PaymentsScreen() {
   const { user, logout } = useAuthStore();
@@ -277,11 +277,6 @@ function PaymentsScreen() {
                 resizeMode="contain"
               />
             </View>
-
-            {/* Subtext */}
-            <Text className="text-xs sm:text-sm text-gray-100 mb-4 text-center italic">
-              Send ₹10 to check if this is really working
-            </Text>
 
             {/* Action Buttons */}
             <View className="flex-row gap-2 sm:gap-3 mb-4 w-full">

@@ -294,7 +294,7 @@ export default function MonthlySummaryScreen() {
               <Download size={18} color="#3B82F6" />
             )}
             <Text className="text-xs sm:text-sm font-medium text-gray-700">
-              {exportingCSV ? "Generating..." : "Export CSV"}
+              {exportingCSV ? "Generating..." : "Export Bill"}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

@@ -13,7 +13,8 @@ export interface BoarderProfile {
   name: string;
   email: string;
   phone?: string;
-  roomNumber?: string;
+  roomNum?: string; // Database field name
+  roomNumber?: string; // Alias for compatibility
   advance: number;
   current: number;
   isActive: boolean;

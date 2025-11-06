@@ -64,7 +64,7 @@ export async function generateMonthlyBillingCSV(): Promise<string> {
     const boarderBillingData = await Promise.all(
       boarders.map(async (boarder) => {
         const mealCountResult = await countOnMealsForBoarder(
-          boarder.$id,
+          boarder.userId,
           startDate,
           endDate,
           false
@@ -74,7 +74,8 @@ export async function generateMonthlyBillingCSV(): Promise<string> {
         const finalDue = mealCost + est - (boarder.advance || 0);
 
         return {
-          roomNumber: boarder.roomNumber || "N/A",
+          roomNumber: (boarder.roomNum || boarder.roomNumber || "N/A"),
+          boarderName: boarder.name || "Unknown",
           mealCount,
           mealCost,
           est,
@@ -116,9 +117,9 @@ export async function generateMonthlyBillingCSV(): Promise<string> {
     csv += "\n";
 
     // Table 3: Room-wise Billing Details
-    csv += "ROOM NO.,MEAL COUNT,MEAL * 30,EST,GUEST MEAL (C) *50,GUEST MEAL (N) *40,Previous Month Due (+/-),Total Deposit,Final Due (+/-)\n";
+    csv += "ROOM NO.,Boarder Name,MEAL COUNT,MEAL * 30,EST,GUEST MEAL (C) *50,GUEST MEAL (N) *40,Previous Month Due (+/-),Total Deposit,Final Due (+/-)\n";
     boarderBillingData.forEach((data) => {
-      csv += `${data.roomNumber},${data.mealCount},${data.mealCost},${est.toFixed(2)},0,0,0,${data.totalDeposit},${data.finalDue.toFixed(2)}\n`;
+      csv += `${data.roomNumber},${data.boarderName},${data.mealCount},${data.mealCost},${est.toFixed(2)},0,0,0,${data.totalDeposit},${data.finalDue.toFixed(2)}\n`;
     });
 
     return csv;

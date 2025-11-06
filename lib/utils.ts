@@ -2,8 +2,8 @@
 
 // Meal cost constants
 export const MEAL_COST = 30; // Cost per meal in rupees
-export const GUEST_MEAL_COST_CASUAL = 50; // Casual guest meal cost
-export const GUEST_MEAL_COST_NIGHT = 40; // Night guest meal cost
+export const GUEST_MEAL_COST_CHICKEN = 50; // Chicken guest meal cost
+export const GUEST_MEAL_COST_NORMAL = 40; // Normal guest meal cost
 
 export const formatIndianDate = (date: Date) => {
   const day = String(date.getDate()).padStart(2, "0");
