@@ -27,6 +27,16 @@ To use the Application, you may be required to create an account. You agree to:
 
 The Application stores and processes personal data that you have provided to the Service Provider in order to provide the Service. It is your responsibility to maintain the security of your phone and access to the Application. The Service Provider strongly advise against jailbreaking or rooting your phone, which involves removing software restrictions and limitations imposed by the official operating system of your device. Such actions could expose your phone to malware, viruses, malicious programs, compromise your phone's security features, and may result in the Application not functioning correctly or at all.
 
+**Device Permissions and Privacy**
+
+The Application is designed with privacy in mind and follows best practices for permission management:
+
+*   The Application does not request sensitive permissions at installation time
+*   Permissions are only requested when you actively use features that require them
+*   You have full control over which permissions to grant, and the Application will function with minimal permissions
+*   Image selection uses the system Photo Picker, which does not require broad storage permissions
+*   You can revoke permissions at any time through your device settings
+
 **Prohibited Conduct**
 
 You agree not to:
@@ -116,6 +126,8 @@ These Terms and Conditions, together with the Privacy Policy, constitute the ent
 The Service Provider may periodically update their Terms and Conditions. Therefore, you are advised to review this page regularly for any changes. The Service Provider will notify you of any changes by posting the new Terms and Conditions on this page.
 
 These terms and conditions are effective as of 2025-10-31
+
+**Last Updated**: January 2025 - Updated to include information about our privacy-first permission model.
 
 **Contact Us**
 

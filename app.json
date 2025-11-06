@@ -3,7 +3,7 @@
     "name": "CUPGMSH",
     "slug": "cupg",
     "version": "1.0.0",
-    "description": "CUPG Mess Hall - A comprehensive mess hall management system for boarders, staff, and managers. Track meals, payments, expenses, and store inventory efficiently.",
+    "description": "CUPG Mess Student Hall - A comprehensive mess hall management system for boarders, staff, and managers. Track meals, payments, expenses, and store inventory efficiently.",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "cupg",
@@ -15,10 +15,8 @@
       "bundleIdentifier": "com.aftab.cupg",
       "buildNumber": "1",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload and share images.",
+        "NSPhotoLibraryUsageDescription": "This app uses the system photo picker to select images.",
         "NSPhotoLibraryAddUsageDescription": "This app needs permission to save images to your photo library.",
-        "NSCameraUsageDescription": "This app needs access to your camera to take photos.",
-        "NSMicrophoneUsageDescription": "This app needs access to your microphone to record audio.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -33,23 +31,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.aftab.cupg",
-      "permissions": [
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.ACCESS_MEDIA_LOCATION",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -74,17 +56,13 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true,
-          "audioPermission": "Allow $(PRODUCT_NAME) to access your audio files."
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to upload images.",
-          "cameraPermission": "The app needs access to your camera to take photos."
+          "photosPermission": "The app uses Android Photo Picker to select images (no storage permission required)."
         }
       ],
       [

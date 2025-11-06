@@ -26,6 +26,19 @@ For a better experience while using the Application, the Service Provider may re
 
 The Application **does not** collect precise location information. Your geographical location is not tracked or stored.
 
+**Device Permissions**
+
+The Application follows a privacy-first approach to device permissions:
+
+*   **No Permissions at Install**: The Application does not request any sensitive permissions when you first install it. This ensures your privacy is protected from the start.
+*   **On-Demand Permissions**: The Application only requests permissions when you actively use features that require them:
+    *   **Image Selection**: When you need to upload receipts or payment screenshots, the Application uses the Android Photo Picker (on Android 13+) which allows you to select specific images without granting broad storage access.
+    *   **Saving Files**: If you choose to save QR codes to your device, the Application will request media library permission at that time. You can decline this permission and the Application will continue to function normally.
+*   **Standard Permissions**: The Application only uses standard, non-sensitive permissions that are essential for basic functionality:
+    *   **Internet Access**: Required for syncing data with our servers
+    *   **Vibration**: Used for notification alerts (standard system permission)
+*   **Camera and Microphone**: The Application does not access your camera or microphone. All image selection is done through the system photo picker.
+
 The Service Provider may use the information you provided to contact you from time to time to provide you with important information, required notices, and service-related updates. You may opt-out of marketing communications at any time.
 
 **Third Party Access**
@@ -83,6 +96,8 @@ The Service Provider is concerned about safeguarding the confidentiality of your
 This Privacy Policy may be updated from time to time for any reason. The Service Provider will notify you of any changes to the Privacy Policy by updating this page with the new Privacy Policy. You are advised to consult this Privacy Policy regularly for any changes, as continued use is deemed approval of all changes.
 
 This privacy policy is effective as of 2025-10-31
+
+**Last Updated**: January 2025 - Updated to reflect our privacy-first permission model and Android Photo Picker implementation.
 
 **Your Consent**
 

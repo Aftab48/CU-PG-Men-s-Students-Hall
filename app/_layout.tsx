@@ -2,14 +2,10 @@
 
 import { useAuthStore } from "@/stores/auth-store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { requestRecordingPermissionsAsync } from "expo-audio";
-import * as ImagePicker from "expo-image-picker";
-import * as MediaLibrary from "expo-media-library";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { Alert } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "./global.css";
 
@@ -21,51 +17,11 @@ function RootLayoutNav() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [permissionsGranted, setPermissionsGranted] = useState(false);
 
-  // Request all permissions (media library, camera, and microphone)
+  // No permissions needed at startup
+  // Note: Image picking uses Android Photo Picker (Android 13+) which doesn't require permissions
+  // Media library permissions are requested on-demand when saving files
   useEffect(() => {
-    const requestPermissions = async () => {
-      try {
-        // Request media library permissions
-        const mediaLibraryStatus = await MediaLibrary.requestPermissionsAsync();
-        
-        // Request camera permissions
-        const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-        
-        // Request media library permissions from image picker (for photos)
-        const mediaPickerStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        
-        // Request microphone/audio recording permissions
-        const audioStatus = await requestRecordingPermissionsAsync();
-        
-        const allGranted = 
-          mediaLibraryStatus.status === "granted" &&
-          cameraStatus.status === "granted" &&
-          mediaPickerStatus.status === "granted" &&
-          audioStatus.granted === true;
-        
-        if (allGranted) {
-          setPermissionsGranted(true);
-        } else {
-          const deniedPermissions = [];
-          if (mediaLibraryStatus.status !== "granted") deniedPermissions.push("Media Library");
-          if (cameraStatus.status !== "granted") deniedPermissions.push("Camera");
-          if (mediaPickerStatus.status !== "granted") deniedPermissions.push("Photo Library");
-          if (audioStatus.granted !== true) deniedPermissions.push("Microphone");
-          
-          Alert.alert(
-            "Permissions Required",
-            `This app needs access to: ${deniedPermissions.join(", ")}. Please enable them in your device settings for full functionality.`,
-            [{ text: "OK" }]
-          );
-          setPermissionsGranted(true); // Allow app to continue even if denied
-        }
-      } catch (error) {
-        console.error("Error requesting permissions:", error);
-        setPermissionsGranted(true); // Allow app to continue on error
-      }
-    };
-
-    requestPermissions();
+    setPermissionsGranted(true);
   }, []);
 
   // Wait for Zustand persist to hydrate
