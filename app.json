@@ -54,12 +54,6 @@
       ],
       "expo-web-browser",
       [
-        "expo-media-library",
-        {
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
-        }
-      ],
-      [
         "expo-image-picker",
         {
           "photosPermission": "The app uses Android Photo Picker to select images (no storage permission required)."
@@ -73,7 +67,8 @@
           "sounds": []
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -7,7 +7,6 @@ import { Asset } from "expo-asset";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import * as MediaLibrary from "expo-media-library";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import {
@@ -94,24 +93,25 @@ function PaymentsScreen() {
 
   const downloadQRCode = async () => {
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow access to save QR code");
-        return;
-      }
-
       setLoading(true);
       
-      // Load the asset and get its local URI
-      const asset = Asset.fromModule(require("@/assets/images/qr.jpg"));
-      await asset.downloadAsync();
-      
-      if (asset.localUri) {
-        const savedAsset = await MediaLibrary.createAssetAsync(asset.localUri);
-        await MediaLibrary.createAlbumAsync("Downloads", savedAsset, false);
-        Alert.alert("Success", "QR code saved to gallery");
+      if (await Sharing.isAvailableAsync()) {
+        // Load the asset and get its local URI
+        const asset = Asset.fromModule(require("@/assets/images/qr.jpg"));
+        await asset.downloadAsync();
+        
+        if (asset.localUri) {
+          // Use sharing to allow user to save/share the QR code
+          // This doesn't require any permissions and works with Android Photo Picker
+          await Sharing.shareAsync(asset.localUri, {
+            mimeType: "image/jpeg",
+            dialogTitle: "Save or share QR code",
+          });
+        } else {
+          throw new Error("Could not load QR code asset");
+        }
       } else {
-        throw new Error("Could not load QR code asset");
+        Alert.alert("Sharing not available", "Sharing is not available on this device");
       }
     } catch (error) {
       console.error("Download error:", error);
